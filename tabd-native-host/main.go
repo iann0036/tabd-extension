@@ -47,16 +47,24 @@ func NewTabdNativeHost() (*TabdNativeHost, error) {
 		return nil, fmt.Errorf("failed to create .tabd directory: %v", err)
 	}
 
-	// Open log file
-	logPath := filepath.Join(tabdDir, "native-host.log")
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %v", err)
-	}
+	var logFile *os.File
 
-	// Set up logging
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Only set up logging if debug environment variable is set
+	if os.Getenv("TABD_DEBUG") != "" {
+		// Open log file
+		logPath := filepath.Join(tabdDir, "native-host.log")
+		logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open log file: %v", err)
+		}
+
+		// Set up logging
+		log.SetOutput(logFile)
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+	} else {
+		// Disable logging by sending to a discard writer
+		log.SetOutput(io.Discard)
+	}
 
 	return &TabdNativeHost{
 		tabdDir: tabdDir,
@@ -112,40 +120,23 @@ func (t *TabdNativeHost) sendMessage(message []byte) error {
 	return nil
 }
 
-// saveClipboardData saves clipboard data to a file in ~/.tabd/
+// saveClipboardData saves clipboard data to the latest file in ~/.tabd/
 func (t *TabdNativeHost) saveClipboardData(data *ClipboardData) error {
-	// Create filename with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("clipboard_%s.json", timestamp)
-	filepathx := filepath.Join(t.tabdDir, filename)
-
-	// Create the file
-	file, err := os.Create(filepathx)
+	// Only save to the latest file
+	latestPath := filepath.Join(t.tabdDir, "latest_clipboard.json")
+	latestFile, err := os.Create(latestPath)
 	if err != nil {
-		return fmt.Errorf("failed to create clipboard file: %v", err)
+		return fmt.Errorf("failed to create latest clipboard file: %v", err)
 	}
-	defer file.Close()
+	defer latestFile.Close()
 
 	// Write JSON data
-	encoder := json.NewEncoder(file)
+	encoder := json.NewEncoder(latestFile)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(data); err != nil {
 		return fmt.Errorf("failed to encode clipboard data: %v", err)
 	}
 
-	// Also update the "latest" file
-	latestPath := filepath.Join(t.tabdDir, "latest_clipboard.json")
-	latestFile, err := os.Create(latestPath)
-	if err != nil {
-		log.Printf("Warning: failed to create latest clipboard file: %v", err)
-	} else {
-		defer latestFile.Close()
-		encoder := json.NewEncoder(latestFile)
-		encoder.SetIndent("", "  ")
-		encoder.Encode(data)
-	}
-
-	log.Printf("Saved clipboard data to %s", filename)
 	return nil
 }
 
@@ -156,16 +147,6 @@ func (t *TabdNativeHost) handleMessage(messageData []byte) error {
 	if err := json.Unmarshal(messageData, &data); err != nil {
 		return fmt.Errorf("failed to parse message: %v", err)
 	}
-
-	log.Printf("Received clipboard data: text_length=%d, url=%s",
-		len(data.Text), data.URL)
-
-	// Log the clipboard text (truncated for privacy)
-	textPreview := data.Text
-	if len(textPreview) > 100 {
-		textPreview = textPreview[:100] + "..."
-	}
-	log.Printf("Clipboard text preview: %s", textPreview)
 
 	// Save to file
 	if err := t.saveClipboardData(&data); err != nil {
