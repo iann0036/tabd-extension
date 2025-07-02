@@ -58,11 +58,8 @@ class GitHubPRFilesScript {
 
     createAIElement() {
         const aiElement = document.createElement('span');
-        aiElement.style.borderRight = 'var(--borderWidth-thin) solid #00ffff66';
-        aiElement.style.borderLeft = 'var(--borderWidth-thin) solid #00ffff66';
-        aiElement.style.borderBottom = 'var(--borderWidth-thin) solid #00ffff66';
-        aiElement.style.borderTop = 'var(--borderWidth-thin) solid #00ffff66';
         aiElement.style.backgroundColor = '#00ffff26';
+        aiElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #00ffff66';
         aiElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         aiElement.style.display = 'inline-block';
 
@@ -71,11 +68,8 @@ class GitHubPRFilesScript {
 
     createPasteElement() {
         const pasteElement = document.createElement('span');
-        pasteElement.style.borderRight = 'var(--borderWidth-thin) solid #ff880066';
-        pasteElement.style.borderLeft = 'var(--borderWidth-thin) solid #ff880066';
-        pasteElement.style.borderBottom = 'var(--borderWidth-thin) solid #ff880066';
-        pasteElement.style.borderTop = 'var(--borderWidth-thin) solid #ff880066';
         pasteElement.style.backgroundColor = '#ff880026';
+        pasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #ff880066';
         pasteElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         pasteElement.style.display = 'inline-block';
 
@@ -84,11 +78,8 @@ class GitHubPRFilesScript {
 
     createUndoRedoElement() {
         const undoRedoElement = document.createElement('span');
-        undoRedoElement.style.borderRight = 'var(--borderWidth-thin) solid #80008066';
-        undoRedoElement.style.borderLeft = 'var(--borderWidth-thin) solid #80008066';
-        undoRedoElement.style.borderBottom = 'var(--borderWidth-thin) solid #80008066';
-        undoRedoElement.style.borderTop = 'var(--borderWidth-thin) solid #80008066';
         undoRedoElement.style.backgroundColor = '#80008026';
+        undoRedoElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #80008066';
         undoRedoElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         undoRedoElement.style.display = 'inline-block';
 
@@ -97,11 +88,8 @@ class GitHubPRFilesScript {
 
     createUserEditElement() {
         const userEditElement = document.createElement('span');
-        userEditElement.style.borderRight = 'var(--borderWidth-thin) solid #88888866';
-        userEditElement.style.borderLeft = 'var(--borderWidth-thin) solid #88888866';
-        userEditElement.style.borderBottom = 'var(--borderWidth-thin) solid #88888866';
-        userEditElement.style.borderTop = 'var(--borderWidth-thin) solid #88888866';
         userEditElement.style.backgroundColor = '#88888811';
+        userEditElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #88888866';
         userEditElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         userEditElement.style.display = 'inline-block';
 
@@ -213,7 +201,7 @@ class GitHubPRFilesScript {
                             // Extract the SHA256 hash and line number from the data-line-anchor
                             const match = lineAnchor.match(/diff-([a-f0-9]+)R(\d+)/);
                             if (match) {
-                                const lineNumber = parseInt(match[2])-1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
+                                const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
                                 console.log(`Tab'd: Processing cell for hash ${hash} at line ${lineNumber}`);
 
                                 /*
@@ -242,7 +230,7 @@ class GitHubPRFilesScript {
                                 */
 
                                 // Find all changes that affect this line number
-                                const changesForLine = changeData.changes.filter(c => 
+                                const changesForLine = changeData.changes.filter(c =>
                                     c.start.line <= lineNumber && c.end.line >= lineNumber
                                 );
 
@@ -253,10 +241,10 @@ class GitHubPRFilesScript {
                                     const innerTextElement = cell.querySelector('.diff-text-inner');
                                     if (innerTextElement) {
                                         const textContent = innerTextElement.textContent;
-                                        
+
                                         // Create character ranges for each change on this line
                                         const characterRanges = [];
-                                        
+
                                         for (const change of changesForLine) {
                                             let startChar = 0;
                                             let endChar = textContent.length;
@@ -307,7 +295,7 @@ class GitHubPRFilesScript {
 
                                         // Build the content with highlights, handling overlaps by prioritizing later changes
                                         let currentPos = 0;
-                                        
+
                                         for (const range of characterRanges) {
                                             // Skip ranges that start before our current position (already processed)
                                             if (range.start < currentPos) {
