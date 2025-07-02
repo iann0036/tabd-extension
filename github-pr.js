@@ -5,7 +5,6 @@ class GitHubPRFilesScript {
     constructor() {
         this.isGitHubPRFiles = this.checkIfGitHubPRFiles();
         this.cleanup = null; // Will be set by setupNavigationListener
-        this.lastTableCount = 0; // Initialize lastTableCount
 
         if (this.isGitHubPRFiles) {
             console.log('Tab\'d: GitHub PR files page detected');
@@ -59,7 +58,7 @@ class GitHubPRFilesScript {
                 clearTimeout(this.navigationTimeout);
             }
             this.navigationTimeout = setTimeout(() => {
-                if (this.checkIfGitHubPRFiles() && this.hasContentChanged()) {
+                if (this.checkIfGitHubPRFiles() && this.hasUnprocessedTables()) {
                     this.modifyPRFilesPage();
                 }
             }, 200);
@@ -185,212 +184,223 @@ class GitHubPRFilesScript {
         const prInfo = this.getPRInfo();
         console.log('Tab\'d: PR Info:', prInfo);
 
-        // Get all <table> elements that are part of the diff
-        const diffTables = document.querySelectorAll('table[data-diff-anchor]');
+        // Get all <table> elements that are part of the diff and haven't been processed yet
+        const diffTables = document.querySelectorAll('table[data-diff-anchor]:not([data-tabd-processed])');
         if (diffTables.length === 0) {
-            console.warn('Tab\'d: No diff tables found on this PR files page');
+            console.log('Tab\'d: No unprocessed diff tables found on this PR files page');
             return;
         }
         
+        console.log(`Tab'd: Found ${diffTables.length} unprocessed diff table(s) to process`);
+        
         diffTables.forEach(async (table) => {
-            // Check if the table has a data-diff-anchor attribute
-            const diffAnchor = table.getAttribute('data-diff-anchor');
-            if (diffAnchor) {
-                // Extract the SHA256 hash from the data-diff-anchor
-                const match = diffAnchor.match(/diff-([a-f0-9]+)/);
-                if (match) {
-                    const hash = match[1];
-                    console.log(`Tab'd: Processing diff table for hash ${hash}`);
+            // Mark this table as being processed to avoid duplicate processing
+            table.setAttribute('data-tabd-processed', 'true');
+            
+            try {
+                // Check if the table has a data-diff-anchor attribute
+                const diffAnchor = table.getAttribute('data-diff-anchor');
+                if (diffAnchor) {
+                    // Extract the SHA256 hash from the data-diff-anchor
+                    const match = diffAnchor.match(/diff-([a-f0-9]+)/);
+                    if (match) {
+                        const hash = match[1];
+                        console.log(`Tab'd: Processing diff table for hash ${hash}`);
 
-                    // Fetch the diff data from the GitHub API
-                    const apiUrl1 = `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/git/ref/notes/tabd__${prInfo.branch}__${hash}`;
-                    const apiData1 = await fetch(apiUrl1)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`GitHub API request failed with status ${response.status}`);
-                            }
-                            return response.json();
-                        });
-                    const apiData2 = await fetch(apiData1.object.url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`GitHub API request failed with status ${response.status}`);
-                            }
-                            return response.json();
-                        });
-                    const apiData3 = await fetch(apiData2.tree.url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`GitHub API request failed with status ${response.status}`);
-                            }
-                            return response.json();
-                        });
-                    const apiData4 = await fetch(apiData3.tree[0].url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`GitHub API request failed with status ${response.status}`);
-                            }
-                            return response.json();
-                        });
-                    const changeData = JSON.parse(atob(apiData4.content));
-
-                    console.log(`Tab'd: Fetched diff data for hash ${hash}`, changeData);
-
-                    // Get all <td> elements that are part of the table
-                    const diffCells = table.querySelectorAll('td.diff-text-cell');
-                    if (diffCells.length === 0) {
-                        console.warn('Tab\'d: No diff cells found on this PR files page');
-                        return;
-                    }
-                    diffCells.forEach(cell => {
-                        // Check if the cell has a data-line-anchor attribute
-                        const lineAnchor = cell.getAttribute('data-line-anchor');
-                        if (lineAnchor) {
-                            // Extract the SHA256 hash and line number from the data-line-anchor
-                            const match = lineAnchor.match(/diff-([a-f0-9]+)R(\d+)/);
-                            if (match) {
-                                const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
-                                console.log(`Tab'd: Processing cell for hash ${hash} at line ${lineNumber}`);
-
-                                /*
-                                {
-                                    "version": 1,
-                                    "changes": [
-                                        {
-                                            "start": {
-                                                "line": 11,
-                                                "character": 0
-                                            },
-                                            "end": {
-                                                "line": 21,
-                                                "character": 0
-                                            },
-                                            "type": "USER_EDIT",
-                                            "creationTimestamp": 1751453263508,
-                                            "author": "Ian Mckay",
-                                            "pasteUrl": "",
-                                            "pasteTitle": "",
-                                            "aiName": "",
-                                            "aiModel": ""
-                                        }
-                                    ]
+                        // Fetch the diff data from the GitHub API
+                        const apiUrl1 = `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/git/ref/notes/tabd__${prInfo.branch}__${hash}`;
+                        const apiData1 = await fetch(apiUrl1)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`GitHub API request failed with status ${response.status}`);
                                 }
-                                */
+                                return response.json();
+                            });
+                        const apiData2 = await fetch(apiData1.object.url)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`GitHub API request failed with status ${response.status}`);
+                                }
+                                return response.json();
+                            });
+                        const apiData3 = await fetch(apiData2.tree.url)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`GitHub API request failed with status ${response.status}`);
+                                }
+                                return response.json();
+                            });
+                        const apiData4 = await fetch(apiData3.tree[0].url)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`GitHub API request failed with status ${response.status}`);
+                                }
+                                return response.json();
+                            });
+                        const changeData = JSON.parse(atob(apiData4.content));
 
-                                // Find all changes that affect this line number
-                                const changesForLine = changeData.changes.filter(c =>
-                                    c.start.line <= lineNumber && c.end.line >= lineNumber
-                                );
+                        console.log(`Tab'd: Fetched diff data for hash ${hash}`, changeData);
 
-                                if (changesForLine.length > 0) {
-                                    console.log(`Tab'd: Found ${changesForLine.length} change(s) for line ${lineNumber}`, changesForLine);
+                        // Get all <td> elements that are part of the table
+                        const diffCells = table.querySelectorAll('td.diff-text-cell');
+                        if (diffCells.length === 0) {
+                            console.warn('Tab\'d: No diff cells found on this PR files page');
+                            return;
+                        }
+                        diffCells.forEach(cell => {
+                            // Check if the cell has a data-line-anchor attribute
+                            const lineAnchor = cell.getAttribute('data-line-anchor');
+                            if (lineAnchor) {
+                                // Extract the SHA256 hash and line number from the data-line-anchor
+                                const match = lineAnchor.match(/diff-([a-f0-9]+)R(\d+)/);
+                                if (match) {
+                                    const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
+                                    console.log(`Tab'd: Processing cell for hash ${hash} at line ${lineNumber}`);
 
-                                    // Find the diff-text-inner element containing the actual text
-                                    const innerTextElement = cell.querySelector('.diff-text-inner');
-                                    if (innerTextElement) {
-                                        const textContent = innerTextElement.textContent;
+                                    /*
+                                    {
+                                        "version": 1,
+                                        "changes": [
+                                            {
+                                                "start": {
+                                                    "line": 11,
+                                                    "character": 0
+                                                },
+                                                "end": {
+                                                    "line": 21,
+                                                    "character": 0
+                                                },
+                                                "type": "USER_EDIT",
+                                                "creationTimestamp": 1751453263508,
+                                                "author": "Ian Mckay",
+                                                "pasteUrl": "",
+                                                "pasteTitle": "",
+                                                "aiName": "",
+                                                "aiModel": ""
+                                            }
+                                        ]
+                                    }
+                                    */
 
-                                        // Create character ranges for each change on this line
-                                        const characterRanges = [];
+                                    // Find all changes that affect this line number
+                                    const changesForLine = changeData.changes.filter(c =>
+                                        c.start.line <= lineNumber && c.end.line >= lineNumber
+                                    );
 
-                                        for (const change of changesForLine) {
-                                            let startChar = 0;
-                                            let endChar = textContent.length;
+                                    if (changesForLine.length > 0) {
+                                        console.log(`Tab'd: Found ${changesForLine.length} change(s) for line ${lineNumber}`, changesForLine);
 
-                                            // Handle multi-line changes properly
-                                            if (change.start.line === change.end.line) {
-                                                // Single line change
-                                                if (parseInt(lineNumber) === change.start.line) {
-                                                    startChar = change.start.character;
-                                                    endChar = change.end.character;
-                                                }
-                                            } else {
-                                                // Multi-line change
-                                                if (parseInt(lineNumber) === change.start.line) {
-                                                    // Start line: highlight from start character to end of line
-                                                    startChar = change.start.character;
-                                                    endChar = textContent.length;
-                                                } else if (parseInt(lineNumber) === change.end.line) {
-                                                    // End line: highlight from beginning to end character
-                                                    startChar = 0;
-                                                    endChar = change.end.character;
+                                        // Find the diff-text-inner element containing the actual text
+                                        const innerTextElement = cell.querySelector('.diff-text-inner');
+                                        if (innerTextElement) {
+                                            const textContent = innerTextElement.textContent;
+
+                                            // Create character ranges for each change on this line
+                                            const characterRanges = [];
+
+                                            for (const change of changesForLine) {
+                                                let startChar = 0;
+                                                let endChar = textContent.length;
+
+                                                // Handle multi-line changes properly
+                                                if (change.start.line === change.end.line) {
+                                                    // Single line change
+                                                    if (parseInt(lineNumber) === change.start.line) {
+                                                        startChar = change.start.character;
+                                                        endChar = change.end.character;
+                                                    }
                                                 } else {
-                                                    // Middle line: highlight entire line
-                                                    startChar = 0;
-                                                    endChar = textContent.length;
+                                                    // Multi-line change
+                                                    if (parseInt(lineNumber) === change.start.line) {
+                                                        // Start line: highlight from start character to end of line
+                                                        startChar = change.start.character;
+                                                        endChar = textContent.length;
+                                                    } else if (parseInt(lineNumber) === change.end.line) {
+                                                        // End line: highlight from beginning to end character
+                                                        startChar = 0;
+                                                        endChar = change.end.character;
+                                                    } else {
+                                                        // Middle line: highlight entire line
+                                                        startChar = 0;
+                                                        endChar = textContent.length;
+                                                    }
+                                                }
+
+                                                // Ensure the range is within bounds
+                                                startChar = Math.max(0, Math.min(startChar, textContent.length));
+                                                endChar = Math.max(startChar, Math.min(endChar, textContent.length));
+
+                                                // Only add non-empty ranges
+                                                if (endChar > startChar) {
+                                                    characterRanges.push({
+                                                        start: startChar,
+                                                        end: endChar,
+                                                        change: change
+                                                    });
                                                 }
                                             }
 
-                                            // Ensure the range is within bounds
-                                            startChar = Math.max(0, Math.min(startChar, textContent.length));
-                                            endChar = Math.max(startChar, Math.min(endChar, textContent.length));
+                                            // Sort ranges by start position - don't merge to preserve change types
+                                            characterRanges.sort((a, b) => a.start - b.start);
 
-                                            // Only add non-empty ranges
-                                            if (endChar > startChar) {
-                                                characterRanges.push({
-                                                    start: startChar,
-                                                    end: endChar,
-                                                    change: change
-                                                });
-                                            }
-                                        }
+                                            // Clear the existing content
+                                            innerTextElement.innerHTML = '';
 
-                                        // Sort ranges by start position - don't merge to preserve change types
-                                        characterRanges.sort((a, b) => a.start - b.start);
+                                            // Build the content with highlights, handling overlaps by prioritizing later changes
+                                            let currentPos = 0;
 
-                                        // Clear the existing content
-                                        innerTextElement.innerHTML = '';
+                                            for (const range of characterRanges) {
+                                                // Skip ranges that start before our current position (already processed)
+                                                if (range.start < currentPos) {
+                                                    continue;
+                                                }
 
-                                        // Build the content with highlights, handling overlaps by prioritizing later changes
-                                        let currentPos = 0;
+                                                // Add text before this highlight
+                                                if (currentPos < range.start) {
+                                                    const beforeText = textContent.substring(currentPos, range.start);
+                                                    const beforeSpan = document.createElement('span');
+                                                    beforeSpan.textContent = beforeText;
+                                                    innerTextElement.appendChild(beforeSpan);
+                                                }
 
-                                        for (const range of characterRanges) {
-                                            // Skip ranges that start before our current position (already processed)
-                                            if (range.start < currentPos) {
-                                                continue;
-                                            }
+                                                // Add the highlighted text
+                                                const highlightedText = textContent.substring(range.start, range.end);
+                                                if (highlightedText) {
+                                                    const highlightElement = this.getHighlightElementForChange(range.change);
+                                                    highlightElement.textContent = highlightedText;
+                                                    innerTextElement.appendChild(highlightElement);
+                                                }
 
-                                            // Add text before this highlight
-                                            if (currentPos < range.start) {
-                                                const beforeText = textContent.substring(currentPos, range.start);
-                                                const beforeSpan = document.createElement('span');
-                                                beforeSpan.textContent = beforeText;
-                                                innerTextElement.appendChild(beforeSpan);
+                                                currentPos = range.end;
                                             }
 
-                                            // Add the highlighted text
-                                            const highlightedText = textContent.substring(range.start, range.end);
-                                            if (highlightedText) {
-                                                const highlightElement = this.getHighlightElementForChange(range.change);
-                                                highlightElement.textContent = highlightedText;
-                                                innerTextElement.appendChild(highlightElement);
+                                            // Add any remaining text after the last highlight
+                                            if (currentPos < textContent.length) {
+                                                const afterText = textContent.substring(currentPos);
+                                                const afterSpan = document.createElement('span');
+                                                afterSpan.textContent = afterText;
+                                                innerTextElement.appendChild(afterSpan);
                                             }
-
-                                            currentPos = range.end;
-                                        }
-
-                                        // Add any remaining text after the last highlight
-                                        if (currentPos < textContent.length) {
-                                            const afterText = textContent.substring(currentPos);
-                                            const afterSpan = document.createElement('span');
-                                            afterSpan.textContent = afterText;
-                                            innerTextElement.appendChild(afterSpan);
                                         }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
+            } catch (error) {
+                console.error(`Tab'd: Error processing table:`, error);
+                // Remove the processed attribute so it can be retried later
+                table.removeAttribute('data-tabd-processed');
             }
         });
     }
 
     // Method to wait for page content to be ready
     waitForPageContent(callback, maxAttempts = 10, attempt = 1) {
-        const diffTables = document.querySelectorAll('table[data-diff-anchor]');
+        const unprocessedTables = document.querySelectorAll('table[data-diff-anchor]:not([data-tabd-processed])');
         
-        if (diffTables.length > 0) {
+        if (unprocessedTables.length > 0) {
             // Content is ready, execute callback
             callback();
         } else if (attempt < maxAttempts) {
@@ -403,17 +413,10 @@ class GitHubPRFilesScript {
         }
     }
 
-    // Method to check if page content has changed significantly
-    hasContentChanged() {
-        const currentDiffTables = document.querySelectorAll('table[data-diff-anchor]');
-        const currentTableCount = currentDiffTables.length;
-        
-        if (this.lastTableCount !== currentTableCount) {
-            this.lastTableCount = currentTableCount;
-            return true;
-        }
-        
-        return false;
+    // Method to check if there are unprocessed tables
+    hasUnprocessedTables() {
+        const unprocessedTables = document.querySelectorAll('table[data-diff-anchor]:not([data-tabd-processed])');
+        return unprocessedTables.length > 0;
     }
 
     getPRInfo() {
