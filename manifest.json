@@ -12,6 +12,10 @@
     "http://*/*",
     "https://*/*"
   ],
+  "icons": {
+    "32": "icons/tabd_logo_32.png",
+    "128": "icons/tabd_logo_128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },

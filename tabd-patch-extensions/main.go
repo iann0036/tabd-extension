@@ -54,13 +54,13 @@ func patchFile(filePath string) error {
 	originalContent := string(content)
 
 	// Check if patch is already present
-	if strings.Contains(originalContent, "latest_copilot.json") {
+	if strings.Contains(originalContent, "/*tabd*/") {
 		fmt.Printf("Patch already exists in %s, skipping\n", filePath)
 		return nil
 	}
 
 	// Pattern to find the function call with opening brace - handle minified code
-	functionPattern := regexp.MustCompile(`handleDidPartiallyAcceptCompletionItem\s*\(([^)]*)\)\s*\{`)
+	functionPattern := regexp.MustCompile(`(?:handleDidPartiallyAcceptCompletionItem|handleDidShowCompletionItem)\s*\(([^)]*)\)\s*\{`)
 
 	// Find all matches with their positions
 	matches := functionPattern.FindAllStringSubmatchIndex(originalContent, -1)
@@ -94,7 +94,7 @@ func patchFile(filePath string) error {
 			contextEnd = len(originalContent)
 		}
 		context := originalContent[contextStart:contextEnd]
-		if strings.Contains(context, "latest_copilot.json") {
+		if strings.Contains(context, "/*tabd*/") {
 			fmt.Printf("Function already patched in %s, skipping\n", filePath)
 			continue
 		}
@@ -106,8 +106,8 @@ func patchFile(filePath string) error {
 			continue
 		}
 
-		// Create the patch code
-		patchCode := fmt.Sprintf("require('fs').writeFileSync(require('path').join(require('os').homedir(), '.tabd', 'latest_copilot.json'), JSON.stringify(%s));", firstVar)
+		// Create the patch code with error handling and fallbacks
+		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(%s,null,2));}catch(e){require("vscode").window.showErrorMessage(String(e));}`, firstVar)
 
 		// Find the opening brace position within the match
 		bracePos := strings.Index(fullMatch, "{")
