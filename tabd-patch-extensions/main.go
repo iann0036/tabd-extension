@@ -107,7 +107,7 @@ func patchFile(filePath string) error {
 		}
 
 		// Create the patch code with error handling and fallbacks
-		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(%s,null,2));}catch(e){require("vscode").window.showErrorMessage(String(e));}`, firstVar)
+		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(%s,null,2));}catch(e){}`, firstVar)
 
 		// Find the opening brace position within the match
 		bracePos := strings.Index(fullMatch, "{")
