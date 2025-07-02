@@ -4,11 +4,30 @@
 class GitHubPRFilesScript {
     constructor() {
         this.isGitHubPRFiles = this.checkIfGitHubPRFiles();
+        this.cleanup = null; // Will be set by setupNavigationListener
+        this.lastTableCount = 0; // Initialize lastTableCount
 
         if (this.isGitHubPRFiles) {
             console.log('Tab\'d: GitHub PR files page detected');
             this.initializePRFileModifications();
         }
+
+        // Setup navigation listener immediately if DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.setupNavigationListener();
+            });
+        } else {
+            // DOM is already ready, setup immediately
+            this.setupNavigationListener();
+        }
+
+        // Cleanup when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            if (this.cleanup) {
+                this.cleanup();
+            }
+        });
     }
 
     checkIfGitHubPRFiles() {
@@ -26,34 +45,68 @@ class GitHubPRFilesScript {
         } else {
             this.modifyPRFilesPage();
         }
-
-        // Also listen for navigation changes (GitHub uses PJAX/SPA navigation)
-        this.setupNavigationListener();
     }
 
     setupNavigationListener() {
-        // Listen for GitHub's navigation events
-        document.addEventListener('pjax:end', () => {
-            if (this.checkIfGitHubPRFiles()) {
-                setTimeout(() => this.modifyPRFilesPage(), 100);
-            }
-        });
+        // Store reference for cleanup
+        this.urlChangeObserver = null;
+        this.lastUrl = window.location.href;
+        this.navigationTimeout = null;
 
-        // Fallback: Listen for URL changes
-        let currentUrl = window.location.href;
-        const urlChangeObserver = new MutationObserver(() => {
-            if (window.location.href !== currentUrl) {
-                currentUrl = window.location.href;
-                if (this.checkIfGitHubPRFiles()) {
-                    setTimeout(() => this.modifyPRFilesPage(), 100);
+        // Debounced function to handle navigation changes
+        const handleNavigation = () => {
+            if (this.navigationTimeout) {
+                clearTimeout(this.navigationTimeout);
+            }
+            this.navigationTimeout = setTimeout(() => {
+                if (this.checkIfGitHubPRFiles() && this.hasContentChanged()) {
+                    this.modifyPRFilesPage();
                 }
+            }, 200);
+        };
+
+        // Listen for various GitHub navigation events
+        const events = ['pjax:end', 'pjax:success', 'turbo:load', 'turbo:render'];
+        events.forEach(event => {
+            document.addEventListener(event, handleNavigation);
+        });
+
+        // Listen for popstate (back/forward navigation)
+        window.addEventListener('popstate', handleNavigation);
+
+        // More efficient MutationObserver - only watch for specific changes
+        this.urlChangeObserver = new MutationObserver((mutations) => {
+            // Check if URL actually changed to avoid unnecessary work
+            if (window.location.href !== this.lastUrl) {
+                this.lastUrl = window.location.href;
+                handleNavigation();
             }
         });
 
-        urlChangeObserver.observe(document.body, {
+        // Only observe the main content area where GitHub updates content
+        const mainContent = document.querySelector('#js-repo-pjax-container') || 
+                           document.querySelector('main') || 
+                           document.body;
+        
+        this.urlChangeObserver.observe(mainContent, {
             childList: true,
-            subtree: true
+            subtree: false, // Don't observe deep changes, just direct children
+            attributes: false
         });
+
+        // Cleanup function
+        this.cleanup = () => {
+            if (this.urlChangeObserver) {
+                this.urlChangeObserver.disconnect();
+            }
+            if (this.navigationTimeout) {
+                clearTimeout(this.navigationTimeout);
+            }
+            events.forEach(event => {
+                document.removeEventListener(event, handleNavigation);
+            });
+            window.removeEventListener('popstate', handleNavigation);
+        };
     }
 
     createAIElement() {
@@ -121,20 +174,14 @@ class GitHubPRFilesScript {
 
     modifyPRFilesPage() {
         console.log('Tab\'d: Modifying GitHub PR files page');
-        /*
-        <table aria-label="Diff for: README.md" class="tab-size width-full DiffLines-module__tableLayoutFixed--YZcIJ" data-diff-anchor="diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5" data-tab-size="8" data-paste-markdown-skip="true" role="grid" style="--line-number-cell-width: 40px; --line-number-cell-width-unified: 80px;">
-        <td
-         data-grid-cell-id="diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5-empty-11-3"
-         data-line-anchor="diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5R11"
-         data-selected="false" role="gridcell" tabindex="-1" valign="top" class="focusable-grid-cell diff-text-cell right-side-diff-cell  "
-         style="background-color: var(--diffBlob-additionLine-bgColor, var(--diffBlob-addition-bgColor-line)); padding-right: 24px;"
-        >
-          <code class="diff-text syntax-highlighted-line addition">
-            <span class="diff-text-marker">+</span>
-            <div class="diff-text-inner">Line 5</div>
-          </code>
-        </td>
-        */
+        
+        // Wait for page content to be ready before processing
+        this.waitForPageContent(() => {
+            this.processPageContent();
+        });
+    }
+
+    processPageContent() {
         const prInfo = this.getPRInfo();
         console.log('Tab\'d: PR Info:', prInfo);
 
@@ -144,6 +191,7 @@ class GitHubPRFilesScript {
             console.warn('Tab\'d: No diff tables found on this PR files page');
             return;
         }
+        
         diffTables.forEach(async (table) => {
             // Check if the table has a data-diff-anchor attribute
             const diffAnchor = table.getAttribute('data-diff-anchor');
@@ -336,6 +384,36 @@ class GitHubPRFilesScript {
                 }
             }
         });
+    }
+
+    // Method to wait for page content to be ready
+    waitForPageContent(callback, maxAttempts = 10, attempt = 1) {
+        const diffTables = document.querySelectorAll('table[data-diff-anchor]');
+        
+        if (diffTables.length > 0) {
+            // Content is ready, execute callback
+            callback();
+        } else if (attempt < maxAttempts) {
+            // Content not ready, wait and try again
+            setTimeout(() => {
+                this.waitForPageContent(callback, maxAttempts, attempt + 1);
+            }, 100 * attempt); // Exponential backoff
+        } else {
+            console.warn('Tab\'d: Timed out waiting for PR files content to load');
+        }
+    }
+
+    // Method to check if page content has changed significantly
+    hasContentChanged() {
+        const currentDiffTables = document.querySelectorAll('table[data-diff-anchor]');
+        const currentTableCount = currentDiffTables.length;
+        
+        if (this.lastTableCount !== currentTableCount) {
+            this.lastTableCount = currentTableCount;
+            return true;
+        }
+        
+        return false;
     }
 
     getPRInfo() {
