@@ -104,7 +104,7 @@ class GitHubPRFilesScript {
                 return aiElement;
             case 'PASTE':
                 const pasteElement = this.createPasteElement();
-                pasteElement.title = `Clipboard Paste by ${change.author || 'you'}${change.pasteUrl !== '' ? ` • From the webpage [${change.pasteTitle}](${change.pasteUrl})` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
+                pasteElement.title = `Clipboard Paste by ${change.author || 'you'}${change.pasteUrl !== '' ? ` • From the webpage "${change.pasteTitle}" (${change.pasteUrl})` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
                 return pasteElement;
             case 'UNDO_REDO':
                 const undoRedoElement = this.createUndoRedoElement();
