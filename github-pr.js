@@ -128,6 +128,16 @@ class GitHubPRFilesScript {
         return pasteElement;
     }
 
+    createIDEPasteElement() {
+        const idePasteElement = document.createElement('span');
+        idePasteElement.style.backgroundColor = '#a4f54226';
+        idePasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #a4f54266';
+        idePasteElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
+        idePasteElement.style.display = 'inline-block';
+
+        return idePasteElement;
+    }
+
     createUndoRedoElement() {
         const undoRedoElement = document.createElement('span');
         undoRedoElement.style.backgroundColor = '#80008026';
@@ -158,6 +168,10 @@ class GitHubPRFilesScript {
                 const pasteElement = this.createPasteElement();
                 pasteElement.title = `Clipboard Paste by ${change.author || 'you'}${change.pasteUrl !== '' ? ` • From the webpage "${change.pasteTitle}" (${change.pasteUrl})` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
                 return pasteElement;
+            case 'IDE_PASTE':
+                const idePasteElement = this.createIDEPasteElement();
+                idePasteElement.title = `Clipboard Paste by ${change.author || 'you'}${change.pasteUrl !== '' ? ` • From the ${change.pasteUrl} repository at ${change.pasteTitle}` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
+                return idePasteElement;
             case 'UNDO_REDO':
                 const undoRedoElement = this.createUndoRedoElement();
                 undoRedoElement.title = `Undo/Redo by ${change.author || 'you'} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
