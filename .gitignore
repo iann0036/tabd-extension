@@ -139,3 +139,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 tabd-native-host/tabd-native-host
 tabd-patch-extensions/tabd-patch-extensions
+tabd-patch-extensions/tabd-patch-extensions

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -9,6 +10,45 @@ import (
 	"runtime"
 	"strings"
 )
+
+// ExtensionMetadata holds information about a VS Code extension
+type ExtensionMetadata struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	Publisher   string `json:"publisher"`
+}
+
+// getExtensionMetadata reads the package.json file and extracts extension metadata
+func getExtensionMetadata(extensionDir string) (*ExtensionMetadata, error) {
+	packageJsonPath := filepath.Join(extensionDir, "package.json")
+
+	// Check if package.json exists
+	if _, err := os.Stat(packageJsonPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("package.json not found in %s", extensionDir)
+	}
+
+	// Read package.json
+	content, err := os.ReadFile(packageJsonPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read package.json: %w", err)
+	}
+
+	// Parse JSON
+	var metadata ExtensionMetadata
+	if err := json.Unmarshal(content, &metadata); err != nil {
+		return nil, fmt.Errorf("failed to parse package.json: %w", err)
+	}
+
+	return &metadata, nil
+}
+
+// getDisplayName returns the display name or falls back to name
+func (em *ExtensionMetadata) getDisplayName() string {
+	if em.DisplayName != "" {
+		return em.DisplayName
+	}
+	return em.Name
+}
 
 // getSupportedExtensions returns the list of JavaScript/TypeScript file extensions to check
 func getSupportedExtensions() []string {
@@ -45,7 +85,7 @@ func isSupportedFile(filename string) bool {
 }
 
 // patchFile processes a single file and applies patches if needed
-func patchFile(filePath string) error {
+func patchFile(filePath string, extensionMeta *ExtensionMetadata) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -107,7 +147,14 @@ func patchFile(filePath string) error {
 		}
 
 		// Create the patch code with error handling and fallbacks
-		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(%s,null,2));}catch(e){}`, firstVar)
+		extensionName := "unknown"
+		if extensionMeta != nil {
+			// Escape single quotes in extension name to prevent JavaScript syntax errors
+			extensionName = strings.ReplaceAll(extensionMeta.getDisplayName(), "'", "\\'")
+		}
+
+		// Create an enhanced data object that includes both the original data and extension metadata
+		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}const data={...%s,_extensionName:'%s',_timestamp:Date.now()};fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(data,null,2));}catch(e){}`, firstVar, extensionName)
 
 		// Find the opening brace position within the match
 		bracePos := strings.Index(fullMatch, "{")
@@ -158,29 +205,59 @@ func extractFirstVariableFromParams(params string) (string, error) {
 
 // walkExtensions recursively walks through the extensions directory and processes files
 func walkExtensions(extensionsPath string) error {
-	return filepath.WalkDir(extensionsPath, func(path string, d fs.DirEntry, err error) error {
+	// First, find all extension directories (they should contain package.json)
+	entries, err := os.ReadDir(extensionsPath)
+	if err != nil {
+		return fmt.Errorf("failed to read extensions directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		extensionDir := filepath.Join(extensionsPath, entry.Name())
+
+		// Try to get extension metadata
+		extensionMeta, err := getExtensionMetadata(extensionDir)
 		if err != nil {
-			fmt.Printf("Warning: Error accessing %s: %v\n", path, err)
-			return nil // Continue walking even if there's an error with one file/directory
+			// If we can't get metadata, still try to patch files but with nil metadata
+			fmt.Printf("Warning: Could not read extension metadata for %s: %v\n", entry.Name(), err)
+		} else {
+			fmt.Printf("Processing extension: %s\n", extensionMeta.getDisplayName())
 		}
 
-		// Skip directories
-		if d.IsDir() {
+		// Walk through all files in this extension directory
+		err = filepath.WalkDir(extensionDir, func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				fmt.Printf("Warning: Error accessing %s: %v\n", path, walkErr)
+				return nil // Continue walking even if there's an error with one file/directory
+			}
+
+			// Skip directories
+			if d.IsDir() {
+				return nil
+			}
+
+			// Check if this is a supported file type
+			if !isSupportedFile(path) {
+				return nil
+			}
+
+			// Process the file with extension metadata
+			if err := patchFile(path, extensionMeta); err != nil {
+				fmt.Printf("Warning: Error processing %s: %v\n", path, err)
+			}
+
 			return nil
-		}
+		})
 
-		// Check if this is a supported file type
-		if !isSupportedFile(path) {
-			return nil
+		if err != nil {
+			fmt.Printf("Warning: Error walking extension directory %s: %v\n", extensionDir, err)
 		}
+	}
 
-		// Process the file
-		if err := patchFile(path); err != nil {
-			fmt.Printf("Warning: Error processing %s: %v\n", path, err)
-		}
-
-		return nil
-	})
+	return nil
 }
 
 func main() {
