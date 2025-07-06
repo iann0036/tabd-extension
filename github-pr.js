@@ -162,7 +162,7 @@ class GitHubPRFilesScript {
         switch (change.type) {
             case 'AI_GENERATED':
                 const aiElement = this.createAIElement();
-                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName} (${change.aiModel})` : ''}${change.aiExplanation !== '' ? ` • Generated with the prompt "${change.aiExplanation}"` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
+                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName} (${change.aiModel})` : ''}${change.aiExplanation !== '' ? ` • Explanation of change "${change.aiExplanation}"` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
                 return aiElement;
             case 'PASTE':
                 const pasteElement = this.createPasteElement();
