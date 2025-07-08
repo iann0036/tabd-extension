@@ -161,8 +161,16 @@ class GitHubPRFilesScript {
     getHighlightElementForChange(change) {
         switch (change.type) {
             case 'AI_GENERATED':
+                const aiType = {
+                    'inlineCompletion': ' • Using inline completion',
+                    'applyPatch': ' • Using the apply patch tool',
+                    'createFile': ' • Using the create file tool',
+                    'insertEdit': ' • Using the insert edit tool',
+                    'replaceString': ' • Using the replace string tool',
+                    '': ''
+                }[change.aiType] || '';
                 const aiElement = this.createAIElement();
-                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName} (${change.aiModel})` : ''} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
+                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName} (${change.aiModel})` : ''}${aiType} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
                 return aiElement;
             case 'PASTE':
                 const pasteElement = this.createPasteElement();
