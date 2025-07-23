@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tab'd Extension Options</title>
+  <title>Tab'd Options</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -11,19 +11,19 @@
       margin: 40px auto;
       padding: 0 20px;
       line-height: 1.6;
-      color: #333;
-      background-color: #f5f5f5;
+      color: #e5e7eb;
+      background-color: #111827;
     }
 
     .container {
-      background-color: white;
+      background-color: #1f2937;
       border-radius: 8px;
       padding: 30px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     }
 
     h1 {
-      color: #2563eb;
+      color: #60a5fa;
       margin-bottom: 30px;
       text-align: center;
       font-size: 28px;
@@ -33,13 +33,13 @@
     .option-section {
       margin-bottom: 30px;
       padding: 20px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #374151;
       border-radius: 6px;
-      background-color: #fafafa;
+      background-color: #2d3748;
     }
 
     .option-section h2 {
-      color: #374151;
+      color: #f3f4f6;
       font-size: 18px;
       margin-bottom: 15px;
       margin-top: 0;
@@ -55,16 +55,16 @@
       display: flex;
       align-items: center;
       padding: 10px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #4b5563;
       border-radius: 4px;
-      background-color: white;
+      background-color: #374151;
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .radio-option:hover {
-      border-color: #2563eb;
-      background-color: #f8faff;
+      border-color: #60a5fa;
+      background-color: #1f2937;
     }
 
     .radio-option input[type="radio"] {
@@ -80,7 +80,7 @@
 
     .radio-option .description {
       font-size: 14px;
-      color: #6b7280;
+      color: #9ca3af;
       margin-top: 4px;
     }
 
@@ -88,16 +88,16 @@
       display: flex;
       align-items: center;
       padding: 15px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #4b5563;
       border-radius: 4px;
-      background-color: white;
+      background-color: #374151;
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .checkbox-option:hover {
-      border-color: #2563eb;
-      background-color: #f8faff;
+      border-color: #60a5fa;
+      background-color: #1f2937;
     }
 
     .checkbox-option input[type="checkbox"] {
@@ -112,12 +112,17 @@
       font-weight: 500;
     }
 
+    .checkbox-option .description {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
     .custom-domains-container {
-      margin-top: 15px;
       padding: 15px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #4b5563;
       border-radius: 4px;
-      background-color: white;
+      background-color: #374151;
       display: none;
     }
 
@@ -129,24 +134,26 @@
       display: block;
       font-weight: 500;
       margin-bottom: 8px;
-      color: #374151;
+      color: #f3f4f6;
     }
 
     .custom-domains-container textarea {
       width: 100%;
       min-height: 120px;
       padding: 12px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #4b5563;
       border-radius: 4px;
       font-family: monospace;
       font-size: 14px;
       resize: vertical;
       box-sizing: border-box;
+      background-color: #1f2937;
+      color: #e5e7eb;
     }
 
     .custom-domains-container .help-text {
       font-size: 13px;
-      color: #6b7280;
+      color: #9ca3af;
       margin-top: 8px;
     }
 
@@ -154,11 +161,11 @@
       text-align: center;
       margin-top: 40px;
       padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid #4b5563;
     }
 
     .save-button {
-      background-color: #2563eb;
+      background-color: #3b82f6;
       color: white;
       border: none;
       padding: 12px 32px;
@@ -170,11 +177,11 @@
     }
 
     .save-button:hover {
-      background-color: #1d4ed8;
+      background-color: #2563eb;
     }
 
     .save-button.secondary:hover {
-      background-color: #4b5563;
+      background-color: #374151;
     }
 
     .status-message {
@@ -187,15 +194,15 @@
     }
 
     .status-message.success {
-      background-color: #dcfce7;
-      color: #166534;
-      border: 1px solid #bbf7d0;
+      background-color: #065f46;
+      color: #a7f3d0;
+      border: 1px solid #047857;
     }
 
     .status-message.error {
-      background-color: #fee2e2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
+      background-color: #7f1d1d;
+      color: #fca5a5;
+      border: 1px solid #b91c1c;
     }
 
     .logo {
@@ -204,17 +211,16 @@
     }
 
     .logo img {
-      width: 64px;
-      height: 64px;
+      width: 256px;
+      height: auto;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="logo">
-      <img src="icons/tabd_logo_128.png" alt="Tab'd Logo">
+      <img src="icons/tabd_logo.png" alt="Tab'd Logo">
     </div>
-    <h1>Tab'd Extension Options</h1>
 
     <!-- Clipboard Tracking Options -->
     <div class="option-section">
@@ -231,7 +237,7 @@
         <div class="radio-option">
           <input type="radio" id="tracking-known" name="clipboard-tracking" value="known" checked>
           <div>
-            <label for="tracking-known">Known code and documentation websites (Default)</label>
+            <label for="tracking-known">Known code and documentation websites</label>
             <div class="description">Track clipboard operations on popular development sites like GitHub, Stack Overflow, documentation sites, etc.</div>
           </div>
         </div>
@@ -244,21 +250,21 @@
           </div>
         </div>
         
+        <!-- Custom domains input -->
+        <div id="custom-domains-container" class="custom-domains-container">
+          <label for="custom-domains">Custom Website Domains:</label>
+          <textarea id="custom-domains" placeholder="Enter one domain per line, e.g.:&#10;github.com&#10;stackoverflow.com&#10;docs.python.org&#10;*.example.com"></textarea>
+          <div class="help-text">
+            Enter one domain per line. You can use wildcards (*) for subdomains. Examples: github.com, *.github.com, docs.python.org
+          </div>
+        </div>
+        
         <div class="radio-option">
           <input type="radio" id="tracking-none" name="clipboard-tracking" value="none">
           <div>
             <label for="tracking-none">No clipboard tracking</label>
             <div class="description">Disable clipboard tracking entirely</div>
           </div>
-        </div>
-      </div>
-      
-      <!-- Custom domains input -->
-      <div id="custom-domains-container" class="custom-domains-container">
-        <label for="custom-domains">Custom Website Domains:</label>
-        <textarea id="custom-domains" placeholder="Enter one domain per line, e.g.:&#10;github.com&#10;stackoverflow.com&#10;docs.python.org&#10;*.example.com"></textarea>
-        <div class="help-text">
-          Enter one domain per line. You can use wildcards (*) for subdomains. Examples: github.com, *.github.com, docs.python.org
         </div>
       </div>
     </div>
@@ -278,7 +284,7 @@
     <!-- Save Section -->
     <div class="save-section">
       <button id="save-options" class="save-button">Save Options</button>
-      <button id="test-connection" class="save-button secondary" style="margin-top: 10px; background-color: #6b7280;">Test VS Code Connection</button>
+      <button id="test-connection" class="save-button secondary" style="margin-top: 10px; background-color: #4b5563;">Test VS Code Connection</button>
       <div id="status-message" class="status-message"></div>
     </div>
   </div>

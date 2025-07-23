@@ -104,24 +104,70 @@ class TabdBackground {
 
     if (options.clipboardTracking === 'known') {
       const knownSites = [
-        'github.com', 'gitlab.com', 'bitbucket.org',
-        'stackoverflow.com', 'stackexchange.com',
-        'developer.mozilla.org', 'docs.python.org', 'docs.microsoft.com',
-        'docs.google.com', 'nodejs.org', 'reactjs.org', 'vuejs.org',
-        'angular.io', 'laravel.com', 'django-project.com',
-        'flask.palletsprojects.com', 'fastapi.tiangolo.com', 'spring.io',
-        'kubernetes.io', 'docker.com', 'aws.amazon.com', 'cloud.google.com',
-        'azure.microsoft.com', 'digitalocean.com', 'heroku.com',
-        'netlify.com', 'vercel.com', 'codepen.io', 'jsfiddle.net',
-        'codesandbox.io', 'replit.com', 'glitch.com', 'medium.com',
-        'dev.to', 'hashnode.com', 'freecodecamp.org', 'w3schools.com',
-        'tutorialspoint.com', 'geeksforgeeks.org', 'leetcode.com',
-        'hackerrank.com', 'codewars.com', 'topcoder.com', 'codeforces.com',
-        'atcoder.jp', 'hackernews.ycombinator.com'
+        'github.com',
+        'gitlab.com',
+        'bitbucket.org',
+        'stackoverflow.com',
+        'stackexchange.com',
+        'developer.mozilla.org',
+        'docs.python.org',
+        'docs.microsoft.com',
+        'docs.google.com',
+        'nodejs.org',
+        'reactjs.org',
+        'vuejs.org',
+        'angular.io',
+        'laravel.com',
+        'django-project.com',
+        'flask.palletsprojects.com',
+        'fastapi.tiangolo.com',
+        'spring.io',
+        'kubernetes.io',
+        'docker.com',
+        'aws.amazon.com',
+        'cloud.google.com',
+        'azure.microsoft.com',
+        'digitalocean.com',
+        'heroku.com',
+        'netlify.com',
+        'vercel.com',
+        'codepen.io',
+        'jsfiddle.net',
+        'codesandbox.io',
+        'replit.com',
+        'glitch.com',
+        'medium.com',
+        'dev.to',
+        'hashnode.com',
+        'freecodecamp.org',
+        'w3schools.com',
+        'tutorialspoint.com',
+        'geeksforgeeks.org',
+        'leetcode.com',
+        'hackerrank.com',
+        'codewars.com',
+        'topcoder.com',
+        'codeforces.com',
+        'atcoder.jp',
+        'reddit.com/r/programming',
+        'reddit.com/r/webdev',
+        'reddit.com/r/javascript',
+        'reddit.com/r/python',
+        'hackernews.ycombinator.com'
       ];
       
       return knownSites.some(site => {
-        return hostname === site || hostname.endsWith('.' + site);
+        if (site.includes('/')) {
+          // Handle domains with path prefixes
+          const [siteDomain, sitePath] = site.split('/', 2);
+          const urlPath = urlObj.pathname;
+          const domainMatches = hostname === siteDomain || hostname.endsWith('.' + siteDomain);
+          const pathMatches = urlPath.startsWith('/' + sitePath);
+          return domainMatches && pathMatches;
+        } else {
+          // Handle regular domains
+          return hostname === site || hostname.endsWith('.' + site);
+        }
       });
     }
 

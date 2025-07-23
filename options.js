@@ -2,59 +2,6 @@
 
 class TabdOptions {
   constructor() {
-    this.defaultKnownSites = [
-      'github.com',
-      'gitlab.com',
-      'bitbucket.org',
-      'stackoverflow.com',
-      'stackexchange.com',
-      'developer.mozilla.org',
-      'docs.python.org',
-      'docs.microsoft.com',
-      'docs.google.com',
-      'nodejs.org',
-      'reactjs.org',
-      'vuejs.org',
-      'angular.io',
-      'laravel.com',
-      'django-project.com',
-      'flask.palletsprojects.com',
-      'fastapi.tiangolo.com',
-      'spring.io',
-      'kubernetes.io',
-      'docker.com',
-      'aws.amazon.com',
-      'cloud.google.com',
-      'azure.microsoft.com',
-      'digitalocean.com',
-      'heroku.com',
-      'netlify.com',
-      'vercel.com',
-      'codepen.io',
-      'jsfiddle.net',
-      'codesandbox.io',
-      'replit.com',
-      'glitch.com',
-      'medium.com',
-      'dev.to',
-      'hashnode.com',
-      'freecodecamp.org',
-      'w3schools.com',
-      'tutorialspoint.com',
-      'geeksforgeeks.org',
-      'leetcode.com',
-      'hackerrank.com',
-      'codewars.com',
-      'topcoder.com',
-      'codeforces.com',
-      'atcoder.jp',
-      'reddit.com/r/programming',
-      'reddit.com/r/webdev',
-      'reddit.com/r/javascript',
-      'reddit.com/r/python',
-      'hackernews.ycombinator.com'
-    ];
-
     this.initializeOptions();
     this.setupEventListeners();
   }
@@ -162,6 +109,40 @@ class TabdOptions {
       radio.addEventListener('change', this.toggleCustomDomainsContainer.bind(this));
     });
 
+    // Make entire radio option boxes clickable
+    const radioOptions = document.querySelectorAll('.radio-option');
+    radioOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        // Don't trigger if clicking directly on the radio input or label
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') {
+          return;
+        }
+        
+        const radio = option.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          // Trigger change event to update custom domains visibility
+          radio.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+
+    // Make entire checkbox option boxes clickable
+    const checkboxOptions = document.querySelectorAll('.checkbox-option');
+    checkboxOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        // Don't trigger if clicking directly on the checkbox input or label
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') {
+          return;
+        }
+        
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+        }
+      });
+    });
+
     // Form validation for custom domains
     const customDomainsTextarea = document.getElementById('custom-domains');
     if (customDomainsTextarea) {
@@ -193,7 +174,7 @@ class TabdOptions {
     if (!textarea) return;
 
     const value = textarea.value;
-    const lines = value.split('\n').filter(line => line.trim() !== '');
+    const lines = value.replace(/,/g, "\n").split('\n').filter(line => line.trim() !== '');
     
     // Basic validation - check for invalid characters or patterns
     const invalidLines = lines.filter(line => {
@@ -203,7 +184,7 @@ class TabdOptions {
       return !domainRegex.test(domain);
     });
 
-    // Visual feedback (you could enhance this)
+    // Visual feedback
     if (invalidLines.length > 0) {
       textarea.style.borderColor = '#dc2626';
     } else {
@@ -218,7 +199,6 @@ class TabdOptions {
     // Disable save button during save
     if (saveButton) {
       saveButton.disabled = true;
-      saveButton.textContent = 'Saving...';
     }
 
     try {
@@ -271,7 +251,6 @@ class TabdOptions {
       // Re-enable save button
       if (saveButton) {
         saveButton.disabled = false;
-        saveButton.textContent = 'Save Options';
       }
     }
   }
@@ -325,37 +304,6 @@ class TabdOptions {
       // Re-enable test button
       testButton.disabled = false;
       testButton.textContent = originalText;
-    }
-  }
-
-  // Utility method to get the effective domains for clipboard tracking
-  static async getEffectiveTrackingDomains() {
-    const options = await new Promise((resolve) => {
-      chrome.storage.sync.get({
-        clipboardTracking: 'known',
-        customDomains: '',
-        githubIntegration: true
-      }, resolve);
-    });
-
-    const tabdOptions = new TabdOptions();
-
-    switch (options.clipboardTracking) {
-      case 'all':
-        return ['<all_urls>'];
-      
-      case 'known':
-        return tabdOptions.defaultKnownSites;
-      
-      case 'custom':
-        return options.customDomains
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line !== '');
-      
-      case 'none':
-      default:
-        return [];
     }
   }
 
