@@ -5,27 +5,50 @@ class GitHubPRFilesScript {
     constructor() {
         this.isGitHubPRFiles = this.checkIfGitHubPRFiles();
         this.cleanup = null; // Will be set by setupNavigationListener
+        this.integrationEnabled = false;
 
-        if (this.isGitHubPRFiles) {
-            console.log('Tab\'d: GitHub PR files page detected');
-            this.initializePRFileModifications();
-        }
+        this.initializeWithSettings();
+    }
 
-        // Setup navigation listener immediately if DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                this.setupNavigationListener();
-            });
-        } else {
-            // DOM is already ready, setup immediately
-            this.setupNavigationListener();
-        }
+    async initializeWithSettings() {
+        try {
+            // Check if GitHub integration is enabled
+            const options = await this.getOptions();
+            this.integrationEnabled = options.githubIntegration;
 
-        // Cleanup when page is unloaded
-        window.addEventListener('beforeunload', () => {
-            if (this.cleanup) {
-                this.cleanup();
+            if (this.integrationEnabled && this.isGitHubPRFiles) {
+                console.log('Tab\'d: GitHub PR files page detected');
+                this.initializePRFileModifications();
             }
+
+            // Setup navigation listener immediately if DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    this.setupNavigationListener();
+                });
+            } else {
+                // DOM is already ready, setup immediately
+                this.setupNavigationListener();
+            }
+
+            // Cleanup when page is unloaded
+            window.addEventListener('beforeunload', () => {
+                if (this.cleanup) {
+                    this.cleanup();
+                }
+            });
+        } catch (error) {
+            console.debug('Tab\'d: Error initializing GitHub integration:', error);
+        }
+    }
+
+    async getOptions() {
+        return new Promise((resolve) => {
+            chrome.storage.sync.get({
+                clipboardTracking: 'known',
+                customDomains: '',
+                githubIntegration: true
+            }, resolve);
         });
     }
 
@@ -54,6 +77,8 @@ class GitHubPRFilesScript {
 
         // Debounced function to handle navigation changes
         const handleNavigation = () => {
+            if (!this.integrationEnabled) return;
+            
             if (this.navigationTimeout) {
                 clearTimeout(this.navigationTimeout);
             }

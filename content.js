@@ -3,8 +3,26 @@
 
 class TabdContentScript {
   constructor() {
-    this.setupClipboardMonitoring();
-    this.injectPageScript();
+    this.trackingEnabled = false;
+    this.initializeTracking();
+  }
+
+  async initializeTracking() {
+    try {
+      // Check if tracking is enabled for this URL
+      const response = await chrome.runtime.sendMessage({
+        type: 'CHECK_TRACKING_ENABLED'
+      });
+      
+      this.trackingEnabled = response && response.enabled;
+      
+      if (this.trackingEnabled) {
+        this.setupClipboardMonitoring();
+        this.injectPageScript();
+      }
+    } catch (error) {
+      console.debug('Tab\'d: Error initializing tracking:', error);
+    }
   }
 
   setupClipboardMonitoring() {
@@ -30,6 +48,8 @@ class TabdContentScript {
   }
 
   async handleCopyEvent(event) {
+    if (!this.trackingEnabled) return;
+    
     try {
       // The copy event provides access to the clipboard data being copied
       const selection = window.getSelection();
@@ -46,6 +66,8 @@ class TabdContentScript {
   }
 
   handlePageMessage(event) {
+    if (!this.trackingEnabled) return;
+    
     // Handle messages from injected script
     if (event.source !== window || !event.data.type) return;
     

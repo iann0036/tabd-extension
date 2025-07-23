@@ -50,12 +50,111 @@ class TabdBackground {
   }
 
   setupMessageListeners() {
+    // Handle extension icon click
+    chrome.action.onClicked.addListener((tab) => {
+      chrome.runtime.openOptionsPage();
+    });
+
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'CLIPBOARD_COPY') {
         this.handleClipboardCopy(message.data, sender.tab);
+      } else if (message.type === 'CHECK_TRACKING_ENABLED') {
+        this.checkTrackingEnabled(sender.tab.url, sendResponse);
+        return true; // Will respond asynchronously
+      } else if (message.type === 'TEST_CONNECTION') {
+        this.testConnection(sendResponse);
+        return true; // Will respond asynchronously
       }
       return true;
     });
+  }
+
+  async checkTrackingEnabled(url, sendResponse) {
+    try {
+      const options = await this.getOptions();
+      const isEnabled = await this.isTrackingEnabledForUrl(url, options);
+      sendResponse({ enabled: isEnabled });
+    } catch (error) {
+      console.error('Error checking tracking status:', error);
+      sendResponse({ enabled: false });
+    }
+  }
+
+  async getOptions() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get({
+        clipboardTracking: 'known',
+        customDomains: '',
+        githubIntegration: true
+      }, resolve);
+    });
+  }
+
+  async isTrackingEnabledForUrl(url, options) {
+    if (options.clipboardTracking === 'none') {
+      return false;
+    }
+
+    if (options.clipboardTracking === 'all') {
+      return true;
+    }
+
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    if (options.clipboardTracking === 'known') {
+      const knownSites = [
+        'github.com', 'gitlab.com', 'bitbucket.org',
+        'stackoverflow.com', 'stackexchange.com',
+        'developer.mozilla.org', 'docs.python.org', 'docs.microsoft.com',
+        'docs.google.com', 'nodejs.org', 'reactjs.org', 'vuejs.org',
+        'angular.io', 'laravel.com', 'django-project.com',
+        'flask.palletsprojects.com', 'fastapi.tiangolo.com', 'spring.io',
+        'kubernetes.io', 'docker.com', 'aws.amazon.com', 'cloud.google.com',
+        'azure.microsoft.com', 'digitalocean.com', 'heroku.com',
+        'netlify.com', 'vercel.com', 'codepen.io', 'jsfiddle.net',
+        'codesandbox.io', 'replit.com', 'glitch.com', 'medium.com',
+        'dev.to', 'hashnode.com', 'freecodecamp.org', 'w3schools.com',
+        'tutorialspoint.com', 'geeksforgeeks.org', 'leetcode.com',
+        'hackerrank.com', 'codewars.com', 'topcoder.com', 'codeforces.com',
+        'atcoder.jp', 'hackernews.ycombinator.com'
+      ];
+      
+      return knownSites.some(site => {
+        return hostname === site || hostname.endsWith('.' + site);
+      });
+    }
+
+    if (options.clipboardTracking === 'custom') {
+      const customDomains = options.customDomains
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '');
+
+      return customDomains.some(domain => {
+        if (domain.startsWith('*.')) {
+          const baseDomain = domain.substring(2);
+          return hostname === baseDomain || hostname.endsWith('.' + baseDomain);
+        } else {
+          return hostname === domain || hostname.endsWith('.' + domain);
+        }
+      });
+    }
+
+    return false;
+  }
+
+  testConnection(sendResponse) {
+    try {
+      // Test if we have an active connection to the native host
+      if (this.vscodePort) {
+        sendResponse({ success: true, message: 'Connected to VS Code' });
+      } else {
+        sendResponse({ success: false, message: 'Not connected to VS Code' });
+      }
+    } catch (error) {
+      sendResponse({ success: false, message: 'Connection test failed: ' + error.message });
+    }
   }
 
   async handleClipboardCopy(clipboardData, tab) {

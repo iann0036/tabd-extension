@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab'd Extension Options</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #2563eb;
+      margin-bottom: 30px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .option-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background-color: #fafafa;
+    }
+
+    .option-section h2 {
+      color: #374151;
+      font-size: 18px;
+      margin-bottom: 15px;
+      margin-top: 0;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background-color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .radio-option:hover {
+      border-color: #2563eb;
+      background-color: #f8faff;
+    }
+
+    .radio-option input[type="radio"] {
+      margin-right: 12px;
+      cursor: pointer;
+    }
+
+    .radio-option label {
+      cursor: pointer;
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .radio-option .description {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .checkbox-option {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background-color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .checkbox-option:hover {
+      border-color: #2563eb;
+      background-color: #f8faff;
+    }
+
+    .checkbox-option input[type="checkbox"] {
+      margin-right: 12px;
+      cursor: pointer;
+      transform: scale(1.2);
+    }
+
+    .checkbox-option label {
+      cursor: pointer;
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .custom-domains-container {
+      margin-top: 15px;
+      padding: 15px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background-color: white;
+      display: none;
+    }
+
+    .custom-domains-container.show {
+      display: block;
+    }
+
+    .custom-domains-container label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    .custom-domains-container textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .custom-domains-container .help-text {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    .save-section {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .save-button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .save-button:hover {
+      background-color: #1d4ed8;
+    }
+
+    .save-button.secondary:hover {
+      background-color: #4b5563;
+    }
+
+    .status-message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+    }
+
+    .status-message.success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-message.error {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo img {
+      width: 64px;
+      height: 64px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="icons/tabd_logo_128.png" alt="Tab'd Logo">
+    </div>
+    <h1>Tab'd Extension Options</h1>
+
+    <!-- Clipboard Tracking Options -->
+    <div class="option-section">
+      <h2>Clipboard Tracking</h2>
+      <div class="radio-group">
+        <div class="radio-option">
+          <input type="radio" id="tracking-all" name="clipboard-tracking" value="all">
+          <div>
+            <label for="tracking-all">All websites</label>
+            <div class="description">Track clipboard operations on all websites you visit</div>
+          </div>
+        </div>
+        
+        <div class="radio-option">
+          <input type="radio" id="tracking-known" name="clipboard-tracking" value="known" checked>
+          <div>
+            <label for="tracking-known">Known code and documentation websites (Default)</label>
+            <div class="description">Track clipboard operations on popular development sites like GitHub, Stack Overflow, documentation sites, etc.</div>
+          </div>
+        </div>
+        
+        <div class="radio-option">
+          <input type="radio" id="tracking-custom" name="clipboard-tracking" value="custom">
+          <div>
+            <label for="tracking-custom">Custom websites</label>
+            <div class="description">Define your own list of websites where clipboard tracking should be enabled</div>
+          </div>
+        </div>
+        
+        <div class="radio-option">
+          <input type="radio" id="tracking-none" name="clipboard-tracking" value="none">
+          <div>
+            <label for="tracking-none">No clipboard tracking</label>
+            <div class="description">Disable clipboard tracking entirely</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Custom domains input -->
+      <div id="custom-domains-container" class="custom-domains-container">
+        <label for="custom-domains">Custom Website Domains:</label>
+        <textarea id="custom-domains" placeholder="Enter one domain per line, e.g.:&#10;github.com&#10;stackoverflow.com&#10;docs.python.org&#10;*.example.com"></textarea>
+        <div class="help-text">
+          Enter one domain per line. You can use wildcards (*) for subdomains. Examples: github.com, *.github.com, docs.python.org
+        </div>
+      </div>
+    </div>
+
+    <!-- GitHub Integration Options -->
+    <div class="option-section">
+      <h2>GitHub Web UI Integration</h2>
+      <div class="checkbox-option">
+        <input type="checkbox" id="github-integration" checked>
+        <div>
+          <label for="github-integration">Enable GitHub Web UI integration</label>
+          <div class="description">Enable enhanced features when browsing GitHub repositories and pull requests</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Section -->
+    <div class="save-section">
+      <button id="save-options" class="save-button">Save Options</button>
+      <button id="test-connection" class="save-button secondary" style="margin-top: 10px; background-color: #6b7280;">Test VS Code Connection</button>
+      <div id="status-message" class="status-message"></div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
