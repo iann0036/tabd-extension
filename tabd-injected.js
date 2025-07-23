@@ -76,7 +76,7 @@
           }, '*');
         }
       } catch (error) {
-        console.error('Error handling execCommand copy:', error);
+        console.error('Tab\'d: Error handling execCommand copy:', error);
       }
     }
     
@@ -108,6 +108,4 @@
 
   // Monitor selection changes
   document.addEventListener('selectionchange', checkSelection);
-
-  console.log('Tab\'d clipboard monitoring injected');
 })();

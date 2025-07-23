@@ -20,7 +20,7 @@ A Manifest v3 browser extension that detects clipboard copy operations on web pa
 1. **`manifest.json`** - Manifest v3 configuration
 2. **`background.js`** - Service worker handling communication
 3. **`content.js`** - Content script for clipboard monitoring
-4. **`injected.js`** - Page-context script for Clipboard API interception
+4. **`tabd-injected.js`** - Page-context script for Clipboard API interception
 5. **`tabd-native-host/`** - Go-based native messaging host program
 
 ### Communication Flow
@@ -115,7 +115,7 @@ tabd-extension/
 ├── manifest.json                 # Extension manifest
 ├── background.js                 # Service worker
 ├── content.js                   # Content script
-├── injected.js                  # Page-context script  
+├── tabd-injected.js                  # Page-context script  
 ├── native-messaging-host.json   # Native host config
 ├── install-native-host.sh       # Installation script
 ├── package.json                 # Project metadata

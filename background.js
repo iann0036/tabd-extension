@@ -110,9 +110,7 @@ const tabdBackground = new TabdBackground();
 
 // Keep service worker alive
 chrome.runtime.onStartup.addListener(() => {
-  console.log('Tab\'d extension started');
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Tab\'d extension installed');
 });

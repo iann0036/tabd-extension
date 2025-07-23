@@ -22,7 +22,7 @@ class TabdContentScript {
   injectPageScript() {
     // Inject a script into the page context to monitor clipboard API calls
     const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('injected.js');
+    script.src = chrome.runtime.getURL('tabd-injected.js');
     script.onload = function() {
       this.remove();
     };
@@ -41,7 +41,7 @@ class TabdContentScript {
         });
       }
     } catch (error) {
-      console.error('Error handling copy event:', error);
+      console.debug('Tab\'d: Error handling copy event:', error);
     }
   }
 
@@ -73,7 +73,7 @@ class TabdContentScript {
       });
 
     } catch (error) {
-      console.error('Error sending clipboard data:', error);
+      console.error('Tab\'d: Error sending clipboard data:', error);
     }
   }
 }

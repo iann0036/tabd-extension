@@ -154,7 +154,7 @@ func patchFile(filePath string, extensionMeta *ExtensionMetadata) error {
 		}
 
 		// Create an enhanced data object that includes both the original data and extension metadata
-		patchCode := fmt.Sprintf(`/*tabd*/try{const os=require('os');const path=require('path');const fs=require('fs');const dir=path.join(os.homedir(),'.tabd');if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}const data={...%s,_extensionName:'%s',_timestamp:Date.now(),_type:'inlineCompletion'};fs.writeFileSync(path.join(dir,'latest_ai.json'),JSON.stringify(data,null,2));}catch(e){}`, firstVar, extensionName)
+		patchCode := fmt.Sprintf(`/*tabd*/try{require('vscode').commands.executeCommand('tabd._internal',JSON.stringify({...%s,'_extensionName':'%s','_timestamp':new Date().getTime(),'_type':'inlineCompletion'}));}catch(e){}`, firstVar, extensionName)
 
 		// Find the opening brace position within the match
 		bracePos := strings.Index(fullMatch, "{")
