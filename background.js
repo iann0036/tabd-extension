@@ -104,6 +104,11 @@ class TabdBackground {
 
     if (options.clipboardTracking === 'known') {
       const knownSites = [
+        'google.com',
+        'bing.com',
+        'chatgpt.com',
+        'openai.com',
+        'claude.ai',
         'github.com',
         'gitlab.com',
         'bitbucket.org',
@@ -153,7 +158,8 @@ class TabdBackground {
         'reddit.com/r/webdev',
         'reddit.com/r/javascript',
         'reddit.com/r/python',
-        'hackernews.ycombinator.com'
+        'hackernews.ycombinator.com',
+        'searchcode.com',
       ];
       
       return knownSites.some(site => {
