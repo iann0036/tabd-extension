@@ -22,7 +22,7 @@ class TabdOptions {
       chrome.storage.sync.get({
         clipboardTracking: 'known',
         customDomains: '',
-        githubIntegration: true
+        githubIntegration: false
       }, resolve);
     });
   }
@@ -305,17 +305,6 @@ class TabdOptions {
       testButton.disabled = false;
       testButton.textContent = originalText;
     }
-  }
-
-  // Utility method to check if GitHub integration is enabled
-  static async isGithubIntegrationEnabled() {
-    const options = await new Promise((resolve) => {
-      chrome.storage.sync.get({
-        githubIntegration: true
-      }, resolve);
-    });
-
-    return options.githubIntegration;
   }
 }
 

@@ -47,7 +47,7 @@ class GitHubPRFilesScript {
             chrome.storage.sync.get({
                 clipboardTracking: 'known',
                 customDomains: '',
-                githubIntegration: true
+                githubIntegration: false
             }, resolve);
         });
     }
