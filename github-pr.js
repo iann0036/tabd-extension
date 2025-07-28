@@ -195,7 +195,7 @@ class GitHubPRFilesScript {
                     '': ''
                 }[change.aiType] || '';
                 const aiElement = this.createAIElement();
-                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName} (${change.aiModel})` : ''}${aiType} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
+                aiElement.title = `AI Generated under ${change.author ? (change.author + "'s") : 'your'} control${change.aiName !== '' ? ` • ${change.aiName}` : ''}${change.aiModel !== '' ? ` (${change.aiModel})` : ''}${aiType} • Created at: ${new Date(change.creationTimestamp).toLocaleString()}`;
                 return aiElement;
             case 'PASTE':
                 const pasteElement = this.createPasteElement();
