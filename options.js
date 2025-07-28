@@ -1,5 +1,3 @@
-// Options page functionality for Tab'd extension
-
 class TabdOptions {
   constructor() {
     this.initializeOptions();
