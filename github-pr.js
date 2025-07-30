@@ -192,6 +192,7 @@ class GitHubPRFilesScript {
                     'createFile': ' • Using the create file tool',
                     'insertEdit': ' • Using the insert edit tool',
                     'replaceString': ' • Using the replace string tool',
+                    'applyEdit': ' • Using an internal command',
                     '': ''
                 }[change.aiType] || '';
                 const aiElement = this.createAIElement();
