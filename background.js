@@ -19,7 +19,7 @@ class TabdBackground {
 
     try {
       console.log('Connecting to native messaging host...');
-      this.vscodePort = chrome.runtime.connectNative('com.tabd.vscode');
+      this.vscodePort = chrome.runtime.connectNative('com.iann0036.tabd');
       
       this.vscodePort.onMessage.addListener((message) => {
         console.log('Received message from native host:', message);
