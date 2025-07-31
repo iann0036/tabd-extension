@@ -15,4 +15,4 @@ Alternatively, you may manually load this extension unpackaed.
 
 ### Native Host Installation
 
-To support the clipboard operations, you must install the Native Host. See (iann0036/tabd-native-host)[https://github.com/iann0036/tabd-native-host] for more details.
+To support the clipboard operations, you must install the Native Host. See [iann0036/tabd-native-host](https://github.com/iann0036/tabd-native-host) for more details.
