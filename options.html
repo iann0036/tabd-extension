@@ -120,26 +120,31 @@
       margin-top: 4px;
     }
 
-    .custom-domains-container {
+    .custom-domains-container,
+    .github-token-container {
       padding: 15px;
       border: 1px solid #4b5563;
       border-radius: 4px;
       background-color: #374151;
       display: none;
+      margin-top: 15px;
     }
 
-    .custom-domains-container.show {
+    .custom-domains-container.show,
+    .github-token-container.show {
       display: block;
     }
 
-    .custom-domains-container label {
+    .custom-domains-container label,
+    .github-token-container label {
       display: block;
       font-weight: 500;
       margin-bottom: 8px;
       color: #f3f4f6;
     }
 
-    .custom-domains-container textarea {
+    .custom-domains-container textarea,
+    .github-token-container input[type="password"] {
       width: 100%;
       min-height: 120px;
       padding: 12px;
@@ -153,7 +158,14 @@
       color: #e5e7eb;
     }
 
-    .custom-domains-container .help-text {
+    .github-token-container input[type="password"] {
+      min-height: auto;
+      height: 40px;
+      resize: none;
+    }
+
+    .custom-domains-container .help-text,
+    .github-token-container .help-text {
       font-size: 13px;
       color: #9ca3af;
       margin-top: 8px;
@@ -279,6 +291,17 @@
         <div>
           <label for="github-integration">Enable GitHub Web UI integration (experimental)</label>
           <div class="description">Enable enhanced features when browsing GitHub repositories and pull requests</div>
+        </div>
+      </div>
+      
+      <!-- GitHub Token input -->
+      <div id="github-token-container" class="github-token-container">
+        <label for="github-token">GitHub Personal Access Token:</label>
+        <input type="password" id="github-token" placeholder="github_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <div class="help-text">
+          Optional: Provide a GitHub Personal Access Token to access private repositories and avoid rate limits. 
+          Create a fine-grained token at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color: #60a5fa;">GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens</a>.
+          Grant "Contents" and "Metadata" repository permissions with the "Read-only" access.
         </div>
       </div>
     </div>

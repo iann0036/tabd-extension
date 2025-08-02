@@ -20,7 +20,8 @@ class TabdOptions {
       chrome.storage.sync.get({
         clipboardTracking: 'known',
         customDomains: '',
-        githubIntegration: false
+        githubIntegration: false,
+        githubToken: ''
       }, resolve);
     });
   }
@@ -58,19 +59,29 @@ class TabdOptions {
       githubCheckbox.checked = options.githubIntegration;
     }
 
+    // Set GitHub token
+    const githubTokenInput = document.getElementById('github-token');
+    if (githubTokenInput) {
+      githubTokenInput.value = options.githubToken || '';
+    }
+
     // Show/hide custom domains container
     this.toggleCustomDomainsContainer();
+    // Show/hide GitHub token container
+    this.toggleGitHubTokenContainer();
   }
 
   getOptionsFromForm() {
     const clipboardTracking = document.querySelector('input[name="clipboard-tracking"]:checked')?.value || 'known';
     const customDomains = document.getElementById('custom-domains')?.value || '';
     const githubIntegration = document.getElementById('github-integration')?.checked || false;
+    const githubToken = document.getElementById('github-token')?.value || '';
 
     return {
       clipboardTracking,
       customDomains,
-      githubIntegration
+      githubIntegration,
+      githubToken
     };
   }
 
@@ -91,6 +102,12 @@ class TabdOptions {
     const customDomainsTextarea = document.getElementById('custom-domains');
     if (customDomainsTextarea) {
       customDomainsTextarea.value = '';
+    }
+
+    // Clear GitHub token
+    const githubTokenInput = document.getElementById('github-token');
+    if (githubTokenInput) {
+      githubTokenInput.value = '';
     }
   }
 
@@ -137,9 +154,19 @@ class TabdOptions {
         const checkbox = option.querySelector('input[type="checkbox"]');
         if (checkbox) {
           checkbox.checked = !checkbox.checked;
+          // Trigger change event for GitHub integration checkbox
+          if (checkbox.id === 'github-integration') {
+            this.toggleGitHubTokenContainer();
+          }
         }
       });
     });
+
+    // GitHub integration checkbox change event
+    const githubCheckbox = document.getElementById('github-integration');
+    if (githubCheckbox) {
+      githubCheckbox.addEventListener('change', this.toggleGitHubTokenContainer.bind(this));
+    }
 
     // Form validation for custom domains
     const customDomainsTextarea = document.getElementById('custom-domains');
@@ -160,6 +187,19 @@ class TabdOptions {
     
     if (customRadio && container) {
       if (customRadio.checked) {
+        container.classList.add('show');
+      } else {
+        container.classList.remove('show');
+      }
+    }
+  }
+
+  toggleGitHubTokenContainer() {
+    const githubCheckbox = document.getElementById('github-integration');
+    const container = document.getElementById('github-token-container');
+    
+    if (githubCheckbox && container) {
+      if (githubCheckbox.checked) {
         container.classList.add('show');
       } else {
         container.classList.remove('show');

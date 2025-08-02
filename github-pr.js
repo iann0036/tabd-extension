@@ -1,13 +1,25 @@
-// GitHub Pull Request Files content script for Tab'd extension
-// Modifies DOM on GitHub PR files pages
+// GitHub Pull Request Files and Compare content script for Tab'd extension
+// Modifies DOM on GitHub PR files and compare pages
 
 class GitHubPRFilesScript {
     constructor() {
-        this.isGitHubPRFiles = this.checkIfGitHubPRFiles();
+        this.isGitHubDiffPage = this.checkIfGitHubDiffPage();
         this.cleanup = null; // Will be set by setupNavigationListener
         this.integrationEnabled = false;
+        this.compareData = null;
+        this.isProcessingPageContent = false;
 
         this.initializeWithSettings();
+    }
+
+    // SHA256 hash function
+    async sha256(text) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hash));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
     }
 
     async initializeWithSettings() {
@@ -15,28 +27,26 @@ class GitHubPRFilesScript {
             // Check if GitHub integration is enabled
             const options = await this.getOptions();
             this.integrationEnabled = options.githubIntegration;
+            this.githubToken = options.githubToken || '';
 
-            if (this.integrationEnabled && this.isGitHubPRFiles) {
-                console.log('Tab\'d: GitHub PR files page detected');
-                this.initializePRFileModifications();
-            }
-
-            // Setup navigation listener immediately if DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
+            if (this.integrationEnabled && this.isGitHubDiffPage) {
+                // Setup navigation listener immediately if DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        this.setupNavigationListener();
+                    });
+                } else {
+                    // DOM is already ready, setup immediately
                     this.setupNavigationListener();
-                });
-            } else {
-                // DOM is already ready, setup immediately
-                this.setupNavigationListener();
-            }
-
-            // Cleanup when page is unloaded
-            window.addEventListener('beforeunload', () => {
-                if (this.cleanup) {
-                    this.cleanup();
                 }
-            });
+
+                // Cleanup when page is unloaded
+                window.addEventListener('beforeunload', () => {
+                    if (this.cleanup) {
+                        this.cleanup();
+                    }
+                });
+            }
         } catch (error) {
             console.debug('Tab\'d: Error initializing GitHub integration:', error);
         }
@@ -47,89 +57,69 @@ class GitHubPRFilesScript {
             chrome.storage.sync.get({
                 clipboardTracking: 'known',
                 customDomains: '',
-                githubIntegration: false
+                githubIntegration: false,
+                githubToken: ''
             }, resolve);
         });
     }
 
-    checkIfGitHubPRFiles() {
-        // Check if URL matches GitHub PR files pattern: https://github.com/<owner>/<repo>/pull/<number>/files
-        const urlPattern = /^https:\/\/github\.com\/[^\/]+\/[^\/]+\/pull\/\d+\/files/;
-        return urlPattern.test(window.location.href);
+    // Helper method to make authenticated GitHub API requests
+    async fetchGitHubAPI(url) {
+        const headers = {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'Tabd-Extension'
+        };
+
+        // Add authorization header if token is available
+        if (this.githubToken) {
+            headers['Authorization'] = `Bearer ${this.githubToken}`;
+        }
+
+        const response = await fetch(url, { headers });
+
+        if (!response.ok) {
+            throw new Error(`GitHub API request failed with status ${response.status}`);
+        }
+
+        return response.json();
     }
 
-    initializePRFileModifications() {
-        // Wait for page to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                this.modifyPRFilesPage();
-            });
-        } else {
-            this.modifyPRFilesPage();
-        }
+    checkIfGitHubDiffPage() {
+        // Check if URL matches GitHub PR files pattern: https://github.com/<owner>/<repo>/pull/<number>/files
+        // or GitHub compare pattern: https://github.com/<owner>/<repo>/compare/<branch>
+        const prFilesPattern = /^https:\/\/github\.com\/[^\/]+\/[^\/]+\/pull\/\d+\/files/;
+        const comparePattern = /^https:\/\/github\.com\/[^\/]+\/[^\/]+\/compare\/[^\/]+/;
+        return prFilesPattern.test(window.location.href) || comparePattern.test(window.location.href);
     }
 
     setupNavigationListener() {
         // Store reference for cleanup
-        this.urlChangeObserver = null;
+        this.pollingInterval = null;
         this.lastUrl = window.location.href;
-        this.navigationTimeout = null;
 
-        // Debounced function to handle navigation changes
-        const handleNavigation = () => {
+        // Function to check for unprocessed tables
+        const checkForUnprocessedTables = () => {
             if (!this.integrationEnabled) return;
-            
-            if (this.navigationTimeout) {
-                clearTimeout(this.navigationTimeout);
-            }
-            this.navigationTimeout = setTimeout(() => {
-                if (this.checkIfGitHubPRFiles() && this.hasUnprocessedTables()) {
-                    this.modifyPRFilesPage();
-                }
-            }, 200);
-        };
 
-        // Listen for various GitHub navigation events
-        const events = ['pjax:end', 'pjax:success', 'turbo:load', 'turbo:render'];
-        events.forEach(event => {
-            document.addEventListener(event, handleNavigation);
-        });
-
-        // Listen for popstate (back/forward navigation)
-        window.addEventListener('popstate', handleNavigation);
-
-        // More efficient MutationObserver - only watch for specific changes
-        this.urlChangeObserver = new MutationObserver((mutations) => {
-            // Check if URL actually changed to avoid unnecessary work
+            // Check if URL changed (navigation occurred)
             if (window.location.href !== this.lastUrl) {
                 this.lastUrl = window.location.href;
-                handleNavigation();
             }
-        });
 
-        // Only observe the main content area where GitHub updates content
-        const mainContent = document.querySelector('#js-repo-pjax-container') || 
-                           document.querySelector('main') || 
-                           document.body;
-        
-        this.urlChangeObserver.observe(mainContent, {
-            childList: true,
-            subtree: false, // Don't observe deep changes, just direct children
-            attributes: false
-        });
+            // Always check for unprocessed tables if we're on a GitHub diff page
+            if (this.checkIfGitHubDiffPage()) {
+                this.processPageContent();
+            }
+        };
+
+        // Start polling for unprocessed tables every 500ms
+        this.pollingInterval = setInterval(checkForUnprocessedTables, 500);
 
         // Cleanup function
         this.cleanup = () => {
-            if (this.urlChangeObserver) {
-                this.urlChangeObserver.disconnect();
+            if (this.pollingInterval) {
+                clearInterval(this.pollingInterval);
             }
-            if (this.navigationTimeout) {
-                clearTimeout(this.navigationTimeout);
-            }
-            events.forEach(event => {
-                document.removeEventListener(event, handleNavigation);
-            });
-            window.removeEventListener('popstate', handleNavigation);
         };
     }
 
@@ -219,32 +209,145 @@ class GitHubPRFilesScript {
         }
     }
 
-    modifyPRFilesPage() {
-        console.log('Tab\'d: Modifying GitHub PR files page');
-        
-        // Wait for page content to be ready before processing
-        this.waitForPageContent(() => {
-            this.processPageContent();
-        });
+    processLineHighlighting(cell, lineNumber, changeData) {
+        // Find all changes that affect this line number
+        const changesForLine = changeData.changes.filter(c =>
+            c.start.line <= lineNumber && c.end.line >= lineNumber
+        );
+
+        if (changesForLine.length > 0) {
+            // Find the diff-text-inner element containing the actual text
+            const innerTextElement = cell.querySelector('.diff-text-inner, .blob-code-inner');
+
+            if (innerTextElement) {
+                const textContent = innerTextElement.textContent;
+
+                // Create character ranges for each change on this line
+                const characterRanges = [];
+
+                for (const change of changesForLine) {
+                    let startChar = 0;
+                    let endChar = textContent.length;
+
+                    // Handle multi-line changes properly
+                    if (change.start.line === change.end.line) {
+                        // Single line change
+                        if (parseInt(lineNumber) === change.start.line) {
+                            startChar = change.start.character;
+                            endChar = change.end.character;
+                        }
+                    } else {
+                        // Multi-line change
+                        if (parseInt(lineNumber) === change.start.line) {
+                            // Start line: highlight from start character to end of line
+                            startChar = change.start.character;
+                            endChar = textContent.length;
+                        } else if (parseInt(lineNumber) === change.end.line) {
+                            // End line: highlight from beginning to end character
+                            startChar = 0;
+                            endChar = change.end.character;
+                        } else {
+                            // Middle line: highlight entire line
+                            startChar = 0;
+                            endChar = textContent.length;
+                        }
+                    }
+
+                    // Ensure the range is within bounds
+                    startChar = Math.max(0, Math.min(startChar, textContent.length));
+                    endChar = Math.max(startChar, Math.min(endChar, textContent.length));
+
+                    // Only add non-empty ranges
+                    if (endChar > startChar) {
+                        characterRanges.push({
+                            start: startChar,
+                            end: endChar,
+                            change: change
+                        });
+                    }
+                }
+
+                // Sort ranges by start position - don't merge to preserve change types
+                characterRanges.sort((a, b) => a.start - b.start);
+
+                // Clear the existing content
+                innerTextElement.innerHTML = '';
+
+                // Build the content with highlights, handling overlaps by prioritizing later changes
+                let currentPos = 0;
+
+                for (const range of characterRanges) {
+                    // Skip ranges that start before our current position (already processed)
+                    if (range.start < currentPos) {
+                        continue;
+                    }
+
+                    // Add text before this highlight
+                    if (currentPos < range.start) {
+                        const beforeText = textContent.substring(currentPos, range.start);
+                        const beforeSpan = document.createElement('span');
+                        beforeSpan.textContent = beforeText;
+                        innerTextElement.appendChild(beforeSpan);
+                    }
+
+                    // Add the highlighted text
+                    const highlightedText = textContent.substring(range.start, range.end);
+                    if (highlightedText) {
+                        const highlightElement = this.getHighlightElementForChange(range.change);
+                        highlightElement.textContent = highlightedText;
+                        innerTextElement.appendChild(highlightElement);
+                    }
+
+                    currentPos = range.end;
+                }
+
+                // Add any remaining text after the last highlight
+                if (currentPos < textContent.length) {
+                    const afterText = textContent.substring(currentPos);
+                    const afterSpan = document.createElement('span');
+                    afterSpan.textContent = afterText;
+                    innerTextElement.appendChild(afterSpan);
+                }
+            }
+        }
     }
 
-    processPageContent() {
-        const prInfo = this.getPRInfo();
-        console.log('Tab\'d: PR Info:', prInfo);
+    async processPageContent() {
+        if (this.isProcessingPageContent) {
+            return;
+        }
+        this.isProcessingPageContent = true;
+
+        let prInfo = {};
+        try {
+            prInfo = this.getPRInfo();
+        } catch (error) {
+            this.isProcessingPageContent = false;
+            return;
+        }
+
+        if (!prInfo.repo) {
+            this.isProcessingPageContent = false;
+            return;
+        }
 
         // Get all <table> elements that are part of the diff and haven't been processed yet
         const diffTables = document.querySelectorAll('table[data-diff-anchor]:not([data-tabd-processed])');
         if (diffTables.length === 0) {
-            console.log('Tab\'d: No unprocessed diff tables found on this PR files page');
+            this.isProcessingPageContent = false;
             return;
         }
-        
-        console.log(`Tab'd: Found ${diffTables.length} unprocessed diff table(s) to process`);
-        
-        diffTables.forEach(async (table) => {
+
+        for (const table of diffTables) {
+            const diffCells = table.querySelectorAll('td.diff-text-cell, td.blob-num');
+            if (diffCells.length === 0) {
+                // No diff cells found, skip this table
+                continue;
+            }
+
             // Mark this table as being processed to avoid duplicate processing
             table.setAttribute('data-tabd-processed', 'true');
-            
+
             try {
                 // Check if the table has a data-diff-anchor attribute
                 const diffAnchor = table.getAttribute('data-diff-anchor');
@@ -253,201 +356,115 @@ class GitHubPRFilesScript {
                     const match = diffAnchor.match(/diff-([a-f0-9]+)/);
                     if (match) {
                         const hash = match[1];
-                        console.log(`Tab'd: Processing diff table for hash ${hash}`);
 
-                        // Fetch the diff data from the GitHub API
-                        const apiUrl1 = `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/git/ref/notes/tabd__${prInfo.branch}__${hash}`;
-                        const apiData1 = await fetch(apiUrl1)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`GitHub API request failed with status ${response.status}`);
-                                }
-                                return response.json();
-                            });
-                        const apiData2 = await fetch(apiData1.object.url)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`GitHub API request failed with status ${response.status}`);
-                                }
-                                return response.json();
-                            });
-                        const apiData3 = await fetch(apiData2.tree.url)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`GitHub API request failed with status ${response.status}`);
-                                }
-                                return response.json();
-                            });
-                        const apiData4 = await fetch(apiData3.tree[0].url)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`GitHub API request failed with status ${response.status}`);
-                                }
-                                return response.json();
-                            });
-                        const changeData = JSON.parse(atob(apiData4.content));
+                        let changeData = {};
+                        try {
+                            // Fetch the diff data from the GitHub API (Git Notes)
+                            const apiUrl1 = `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/git/ref/notes/tabd__${prInfo.branch}__${hash}`;
+                            const apiData1 = await this.fetchGitHubAPI(apiUrl1);
+                            const apiData2 = await this.fetchGitHubAPI(apiData1.object.url);
+                            const apiData3 = await this.fetchGitHubAPI(apiData2.tree.url);
+                            const apiData4 = await this.fetchGitHubAPI(apiData3.tree[0].url); // TODO: Order this by latest, also merge changes
+                            changeData = JSON.parse(atob(apiData4.content));
+                        } catch (error) {
+                            if (!prInfo.base || !prInfo.branch) {
+                                console.debug(`Tab'd: Error fetching change data for hash ${hash}:`, prInfo);
+                                continue;
+                            }
 
-                        console.log(`Tab'd: Fetched diff data for hash ${hash}`, changeData);
+                            if (!this.compareData) {
+                                const apiUrl1 = `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/compare/${prInfo.base}...${prInfo.branch}?per_page=100`; // TODO: paginate
+                                this.compareData = await this.fetchGitHubAPI(apiUrl1);
 
-                        // Get all <td> elements that are part of the table
-                        const diffCells = table.querySelectorAll('td.diff-text-cell');
-                        if (diffCells.length === 0) {
-                            console.warn('Tab\'d: No diff cells found on this PR files page');
-                            return;
-                        }
-                        diffCells.forEach(cell => {
-                            // Check if the cell has a data-line-anchor attribute
-                            const lineAnchor = cell.getAttribute('data-line-anchor');
-                            if (lineAnchor) {
-                                // Extract the SHA256 hash and line number from the data-line-anchor
-                                const match = lineAnchor.match(/diff-([a-f0-9]+)R(\d+)/);
-                                if (match) {
-                                    const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
-                                    console.log(`Tab'd: Processing cell for hash ${hash} at line ${lineNumber}`);
+                                // sort files
+                                this.compareData.files.sort((a, b) => a.filename.localeCompare(b.filename));
+                            }
 
-                                    /*
-                                    {
-                                        "version": 1,
-                                        "changes": [
-                                            {
-                                                "start": {
-                                                    "line": 11,
-                                                    "character": 0
-                                                },
-                                                "end": {
-                                                    "line": 21,
-                                                    "character": 0
-                                                },
-                                                "type": "USER_EDIT",
-                                                "creationTimestamp": 1751453263508,
-                                                "author": "Ian Mckay",
-                                                "pasteUrl": "",
-                                                "pasteTitle": "",
-                                                "aiName": "",
-                                                "aiModel": ""
-                                            }
-                                        ]
+                            let matchingFile = "";
+                            for (const filedata of this.compareData.files) {
+                                if (await this.sha256(filedata.filename) === hash) {
+                                    matchingFile = filedata.filename;
+                                    break;
+                                }
+                            }
+
+                            if (!matchingFile) {
+                                console.debug(`Tab'd: No matching file found for hash ${hash}`);
+                                continue;
+                            }
+
+                            // Skip files with leading periods anywhere in their filepath
+                            if (matchingFile.split('/').some(part => part.startsWith('.'))) {
+                                continue;
+                            }
+
+                            for (const filedata of this.compareData.files) {
+                                if (filedata.filename.startsWith('.tabd/log/' + matchingFile + "/tabd-") && filedata.status !== 'removed') {
+                                    const trackingData1 = await this.fetchGitHubAPI(filedata.contents_url);
+                                    const trackingData2 = await this.fetchGitHubAPI(trackingData1.url);
+                                    let content = trackingData2.content;
+                                    if (trackingData2.encoding === 'base64') {
+                                        content = atob(content);
                                     }
-                                    */
+                                    changeData = this.deepMerge(changeData, JSON.parse(content));
+                                }
+                            }
 
-                                    // Find all changes that affect this line number
-                                    const changesForLine = changeData.changes.filter(c =>
-                                        c.start.line <= lineNumber && c.end.line >= lineNumber
-                                    );
+                            if (!changeData.changes || changeData.changes.length === 0) {
+                                continue;
+                            }
+                        }
 
-                                    if (changesForLine.length > 0) {
-                                        console.log(`Tab'd: Found ${changesForLine.length} change(s) for line ${lineNumber}`, changesForLine);
-
-                                        // Find the diff-text-inner element containing the actual text
-                                        const innerTextElement = cell.querySelector('.diff-text-inner');
-                                        if (innerTextElement) {
-                                            const textContent = innerTextElement.textContent;
-
-                                            // Create character ranges for each change on this line
-                                            const characterRanges = [];
-
-                                            for (const change of changesForLine) {
-                                                let startChar = 0;
-                                                let endChar = textContent.length;
-
-                                                // Handle multi-line changes properly
-                                                if (change.start.line === change.end.line) {
-                                                    // Single line change
-                                                    if (parseInt(lineNumber) === change.start.line) {
-                                                        startChar = change.start.character;
-                                                        endChar = change.end.character;
-                                                    }
-                                                } else {
-                                                    // Multi-line change
-                                                    if (parseInt(lineNumber) === change.start.line) {
-                                                        // Start line: highlight from start character to end of line
-                                                        startChar = change.start.character;
-                                                        endChar = textContent.length;
-                                                    } else if (parseInt(lineNumber) === change.end.line) {
-                                                        // End line: highlight from beginning to end character
-                                                        startChar = 0;
-                                                        endChar = change.end.character;
-                                                    } else {
-                                                        // Middle line: highlight entire line
-                                                        startChar = 0;
-                                                        endChar = textContent.length;
-                                                    }
-                                                }
-
-                                                // Ensure the range is within bounds
-                                                startChar = Math.max(0, Math.min(startChar, textContent.length));
-                                                endChar = Math.max(startChar, Math.min(endChar, textContent.length));
-
-                                                // Only add non-empty ranges
-                                                if (endChar > startChar) {
-                                                    characterRanges.push({
-                                                        start: startChar,
-                                                        end: endChar,
-                                                        change: change
-                                                    });
-                                                }
-                                            }
-
-                                            // Sort ranges by start position - don't merge to preserve change types
-                                            characterRanges.sort((a, b) => a.start - b.start);
-
-                                            // Clear the existing content
-                                            innerTextElement.innerHTML = '';
-
-                                            // Build the content with highlights, handling overlaps by prioritizing later changes
-                                            let currentPos = 0;
-
-                                            for (const range of characterRanges) {
-                                                // Skip ranges that start before our current position (already processed)
-                                                if (range.start < currentPos) {
-                                                    continue;
-                                                }
-
-                                                // Add text before this highlight
-                                                if (currentPos < range.start) {
-                                                    const beforeText = textContent.substring(currentPos, range.start);
-                                                    const beforeSpan = document.createElement('span');
-                                                    beforeSpan.textContent = beforeText;
-                                                    innerTextElement.appendChild(beforeSpan);
-                                                }
-
-                                                // Add the highlighted text
-                                                const highlightedText = textContent.substring(range.start, range.end);
-                                                if (highlightedText) {
-                                                    const highlightElement = this.getHighlightElementForChange(range.change);
-                                                    highlightElement.textContent = highlightedText;
-                                                    innerTextElement.appendChild(highlightElement);
-                                                }
-
-                                                currentPos = range.end;
-                                            }
-
-                                            // Add any remaining text after the last highlight
-                                            if (currentPos < textContent.length) {
-                                                const afterText = textContent.substring(currentPos);
-                                                const afterSpan = document.createElement('span');
-                                                afterSpan.textContent = afterText;
-                                                innerTextElement.appendChild(afterSpan);
+                        for (const cell of diffCells) {
+                            if (cell.classList.contains('diff-text-cell')) {
+                                // Check if the cell has a data-line-anchor attribute
+                                const lineAnchor = cell.getAttribute('data-line-anchor');
+                                if (lineAnchor) {
+                                    // Extract the SHA256 hash and line number from the data-line-anchor
+                                    const match = lineAnchor.match(/diff-([a-f0-9]+)R(\d+)/);
+                                    if (match) {
+                                        if (match[1] === hash) {
+                                            const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
+                                            this.processLineHighlighting(cell, lineNumber, changeData);
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Check if the cell has an id attribute with line number information
+                                const cellId = cell.getAttribute('id');
+                                if (cellId) {
+                                    // Extract the SHA256 hash and line number from the id
+                                    const match = cellId.match(/diff-([a-f0-9]+)R(\d+)/);
+                                    if (match) {
+                                        if (match[1] === hash) {
+                                            const lineNumber = parseInt(match[2]) - 1; // GitHub uses 1-based line numbers, convert to 0-based to match our data
+                                            // Find the corresponding code cell in the same row
+                                            const row = cell.parentElement;
+                                            const codeCell = row.querySelector('td.blob-code:last-of-type');
+                                            if (codeCell) {
+                                                this.processLineHighlighting(codeCell, lineNumber, changeData);
                                             }
                                         }
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 }
             } catch (error) {
-                console.error(`Tab'd: Error processing table:`, error);
+                console.debug(`Tab'd: Error processing table:`, error);
                 // Remove the processed attribute so it can be retried later
                 table.removeAttribute('data-tabd-processed');
             }
-        });
+        }
+
+        this.isProcessingPageContent = false;
     }
 
     // Method to wait for page content to be ready
     waitForPageContent(callback, maxAttempts = 10, attempt = 1) {
         const unprocessedTables = document.querySelectorAll('table[data-diff-anchor]:not([data-tabd-processed])');
-        
+
         if (unprocessedTables.length > 0) {
             // Content is ready, execute callback
             callback();
@@ -455,9 +472,9 @@ class GitHubPRFilesScript {
             // Content not ready, wait and try again
             setTimeout(() => {
                 this.waitForPageContent(callback, maxAttempts, attempt + 1);
-            }, 100 * attempt); // Exponential backoff
+            }, Math.min(100 * attempt, 2000)); // Exponential backoff to 2s
         } else {
-            console.warn('Tab\'d: Timed out waiting for PR files content to load');
+            console.debug('Tab\'d: Timed out waiting for diff content to load');
         }
     }
 
@@ -467,9 +484,41 @@ class GitHubPRFilesScript {
         return unprocessedTables.length > 0;
     }
 
+    deepMerge(target, source) {
+        const result = { ...target };
+
+        for (const key in source) {
+            if (source.hasOwnProperty(key)) {
+                if (Array.isArray(source[key])) {
+                    // If both target and source have arrays for the same key, combine them
+                    if (Array.isArray(result[key])) {
+                        result[key] = [...result[key], ...source[key]];
+                    } else {
+                        // If target doesn't have an array for this key, use source array
+                        result[key] = [...source[key]];
+                    }
+                } else if (source[key] !== null && typeof source[key] === 'object') {
+                    // If both target and source have the same key and both are objects, merge recursively
+                    if (result[key] !== null && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+                        result[key] = this.deepMerge(result[key], source[key]);
+                    } else {
+                        // If target doesn't have this key or it's not an object, replace it
+                        result[key] = this.deepMerge({}, source[key]);
+                    }
+                } else {
+                    // For primitive values or null, replace the value
+                    result[key] = source[key];
+                }
+            }
+        }
+
+        return result;
+    }
+
     getPRInfo() {
-        const match = window.location.pathname.match(/\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/);
-        if (match) {
+        // Handle PR files: https://github.com/<owner>/<repo>/pull/<number>/files
+        const prMatch = window.location.pathname.match(/\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/);
+        if (prMatch) {
             // Extract branch from script JSON within <react-app>
             const scriptElement = document.querySelector('script[type="application/json"][data-target="react-app.embeddedData"]');
             if (scriptElement) {
@@ -481,19 +530,55 @@ class GitHubPRFilesScript {
                             owner: pullRequest.headRepositoryOwnerLogin,
                             repo: pullRequest.headRepositoryName,
                             pr: pullRequest.number,
+                            base: pullRequest.baseBranch,
                             branch: pullRequest.headBranch,
                         };
                     }
                 } catch (error) {
-                    console.error('Tab\'d: Error parsing PR data from script:', error);
+                    console.debug('Tab\'d: Error parsing PR data from script:', error);
+                    throw new Error('Not a valid GitHub diff page');
                 }
             }
         }
-        throw new Error('Not a valid GitHub PR files page');
+
+        // Handle compare: https://github.com/<owner>/<repo>/compare/<branch>
+        const compareMatch = window.location.pathname.match(/\/([^\/]+)\/([^\/]+)\/compare\/([^\/]+)/);
+        if (compareMatch) {
+            const scriptElements = document.querySelectorAll('script[type="application/json"][data-target="react-partial.embeddedData"]');
+            if (scriptElements) {
+                try {
+                    let data = {};
+                    for (const scriptElement of scriptElements) {
+                        // Deep merge all data
+                        data = this.deepMerge(data, JSON.parse(scriptElement.textContent));
+                    }
+
+                    if (!compareMatch[3].includes('...')) {
+                        try {
+                            compareMatch[3] = `${data.props.currentTopic.refInfo.name}...${compareMatch[3]}`;
+                        } catch (error) {
+                            throw new Error('Not a valid GitHub diff page');
+                        }
+                    }
+
+                    return {
+                        owner: compareMatch[1],
+                        repo: compareMatch[2],
+                        pr: null, // No PR number for compare pages
+                        base: compareMatch[3].split('...')[0],
+                        branch: compareMatch[3].split('...')[1],
+                    };
+                } catch (error) {
+                    console.debug('Tab\'d: Error parsing PR data from script:', error);
+                }
+            }
+        }
+
+        throw new Error('Not a valid GitHub diff page');
     }
 }
 
-// Initialize the GitHub PR files script
+// Initialize the GitHub diff script
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         new GitHubPRFilesScript();
