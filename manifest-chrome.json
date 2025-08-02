@@ -25,7 +25,7 @@
     "default_title": "Tab'd Options"
   },
   "background": {
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
   "options_ui": {
     "page": "options.html",
@@ -48,10 +48,5 @@
       "resources": ["tabd-injected.js"],
       "matches": ["<all_urls>"]
     }
-  ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "tabd-extension-moz@ian.mn"
-    }
-  }
+  ]
 }
