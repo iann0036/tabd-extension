@@ -126,7 +126,7 @@ class GitHubPRFilesScript {
     createAIElement() {
         const aiElement = document.createElement('span');
         aiElement.style.backgroundColor = '#00ffff26';
-        aiElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #00ffff66';
+        //aiElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #00ffff66';
         aiElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         aiElement.style.display = 'inline-block';
 
@@ -136,7 +136,7 @@ class GitHubPRFilesScript {
     createPasteElement() {
         const pasteElement = document.createElement('span');
         pasteElement.style.backgroundColor = '#ff880026';
-        pasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #ff880066';
+        //pasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #ff880066';
         pasteElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         pasteElement.style.display = 'inline-block';
 
@@ -146,7 +146,7 @@ class GitHubPRFilesScript {
     createIDEPasteElement() {
         const idePasteElement = document.createElement('span');
         idePasteElement.style.backgroundColor = '#a4f54226';
-        idePasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #a4f54266';
+        //idePasteElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #a4f54266';
         idePasteElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         idePasteElement.style.display = 'inline-block';
 
@@ -156,7 +156,7 @@ class GitHubPRFilesScript {
     createUndoRedoElement() {
         const undoRedoElement = document.createElement('span');
         undoRedoElement.style.backgroundColor = '#80008026';
-        undoRedoElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #80008066';
+        //undoRedoElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #80008066';
         undoRedoElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         undoRedoElement.style.display = 'inline-block';
 
@@ -166,7 +166,7 @@ class GitHubPRFilesScript {
     createUserEditElement() {
         const userEditElement = document.createElement('span');
         userEditElement.style.backgroundColor = '#88888811';
-        userEditElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #88888866';
+        //userEditElement.style.boxShadow = 'inset 0 0 0 var(--borderWidth-thin, 1px) #88888866';
         userEditElement.style.mixBlendMode = 'var(--color-diff-blob-x-selected-line-highlight-mix-blend-mode)';
         userEditElement.style.display = 'inline-block';
 
