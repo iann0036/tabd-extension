@@ -15,6 +15,6 @@ Alternatively, you may manually load this extension unpackaed.
 
 ### Browser Helper Installation
 
-To support the clipboard operations, you must install the browser helper. To do so, use the `Tab'd: Install browser helper` command in your IDE.
+To support the clipboard operations, you must install the browser helper. To do so, use the `Tab'd: Install browser helper` command from the Command Palette in your IDE.
 
 See [iann0036/tabd-native-host](https://github.com/iann0036/tabd-native-host) for more details.
