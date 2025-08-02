@@ -52,7 +52,7 @@
           }
         }
       } catch (error) {
-        console.error('Error extracting clipboard data:', error);
+        console.debug('Tab\'d: Error extracting clipboard data:', error);
       }
       
       // Call original method
@@ -76,7 +76,7 @@
           }, '*');
         }
       } catch (error) {
-        console.error('Tab\'d: Error handling execCommand copy:', error);
+        console.debug('Tab\'d: Error handling execCommand copy:', error);
       }
     }
     
