@@ -2,7 +2,7 @@
 
 A browser extension that extends on the [Tab'd IDE extension](https://github.com/iann0036/tabd) in two ways:
 
-1. Detect clipboard copy operations on web pages and passes its contents to the Tab'd IDE extension (requires native host installed)
+1. Detect clipboard copy operations on web pages and passes its contents to the Tab'd IDE extension (requires browser helper installed)
 2. View the highlighted ranged within online web editors (currently only GitHub PR review pages)
 
 ## Installation
