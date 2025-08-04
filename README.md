@@ -13,10 +13,10 @@ You can install this extension from your browsers extension/addon store. Links a
 - [Mozilla Firefox](https://addons.mozilla.org/en-GB/firefox/addon/tab-d/) *Publish in progress*
 - [Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/nhipdcegeolhecgahdhkcgcbgjhcpbpp) *Publish in progress*
 
+Alternatively, you may manually load this extension unpackaed.
+
 > [!IMPORTANT]  
 > Currently, the GitHub PR review page only supports the "new Files Changed experience". A fix for the legacy experience is queued for release in the next version of the extension.
-
-Alternatively, you may manually load this extension unpackaed.
 
 ### Browser Helper Installation
 
