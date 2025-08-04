@@ -10,8 +10,8 @@ A browser extension that extends on the [Tab'd IDE extension](https://github.com
 You can install this extension from your browsers extension/addon store. Links are as follows:
 
 - [Google Chrome](https://chrome.google.com/webstore/detail/tabd/lemjjpeploikbpmkodmmkdjcjodboidn)
-- [Mozilla Firefox](https://addons.mozilla.org/en-GB/firefox/addon/tab-d/) __Publish in progress__
-- [Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/nhipdcegeolhecgahdhkcgcbgjhcpbpp) __Publish in progress__
+- [Mozilla Firefox](https://addons.mozilla.org/en-GB/firefox/addon/tab-d/) *Publish in progress*
+- [Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/nhipdcegeolhecgahdhkcgcbgjhcpbpp) *Publish in progress*
 
 Alternatively, you may manually load this extension unpackaed.
 
