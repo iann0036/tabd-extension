@@ -519,11 +519,16 @@ class GitHubPRFilesScript {
         // Handle PR files: https://github.com/<owner>/<repo>/pull/<number>/files
         const prMatch = window.location.pathname.match(/\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/);
         if (prMatch) {
-            // Extract branch from script JSON within <react-app>
-            const scriptElement = document.querySelector('script[type="application/json"][data-target="react-app.embeddedData"]');
-            if (scriptElement) {
+            // Extract branch from script JSON within embedded data
+            const scriptElements = document.querySelectorAll('script[type="application/json"][data-target="react-app.embeddedData"], script[type="application/json"][data-target="react-partial.embeddedData"]');
+            if (scriptElements) {
                 try {
-                    const data = JSON.parse(scriptElement.textContent);
+                    let data = {};
+                    for (const scriptElement of scriptElements) {
+                        // Deep merge all data
+                        data = this.deepMerge(data, JSON.parse(scriptElement.textContent));
+                    }
+                    
                     if (data && data.payload && data.payload.pullRequest) {
                         const pullRequest = data.payload.pullRequest;
                         return {
@@ -532,6 +537,14 @@ class GitHubPRFilesScript {
                             pr: pullRequest.number,
                             base: pullRequest.baseBranch,
                             branch: pullRequest.headBranch,
+                        };
+                    } else if (data && data.props && data.props.number && data.props.repo && data.props.currentTopic.refInfo.name && document.querySelector('clipboard-copy.js-copy-branch').getAttribute('value')) {
+                        return {
+                            owner: data.props.owner,
+                            repo: data.props.repo,
+                            pr: data.props.number,
+                            base: data.props.currentTopic.refInfo.name,
+                            branch: document.querySelector('clipboard-copy.js-copy-branch').getAttribute('value')
                         };
                     }
                 } catch (error) {
@@ -544,7 +557,7 @@ class GitHubPRFilesScript {
         // Handle compare: https://github.com/<owner>/<repo>/compare/<branch>
         const compareMatch = window.location.pathname.match(/\/([^\/]+)\/([^\/]+)\/compare\/([^\/]+)/);
         if (compareMatch) {
-            const scriptElements = document.querySelectorAll('script[type="application/json"][data-target="react-partial.embeddedData"]');
+            const scriptElements = document.querySelectorAll('script[type="application/json"][data-target="react-partial.embeddedData"], script[type="application/json"][data-target="react-app.embeddedData"]');
             if (scriptElements) {
                 try {
                     let data = {};

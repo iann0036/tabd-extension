@@ -10,12 +10,7 @@
     "storage",
     "scripting"
   ],
-  "license": "AGPL-3.0-only",
   "homepage_url": "https://github.com/iann0036/tabd#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/iann0036/tabd-extension"
-  },
   "host_permissions": [
     "http://*/*",
     "https://*/*"
